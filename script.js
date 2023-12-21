@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'imagem1.jpg',
         'imagem2.jpg',
         'imagem3.jpg',
-        // Adicione mais URLs conforme necessário develop
+        // Adicione mais URLs conforme necessário developppppppp
     ];
 
     // Adiciona as imagens dinamicamente
