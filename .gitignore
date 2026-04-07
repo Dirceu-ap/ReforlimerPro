@@ -34,3 +34,20 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Android / iOS build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+ios/Pods/
+ios/build/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Runtime logs and uploads
+*.log
+logs/
+apiReforlimer/logs/
+apiReforlimer/uploads/
