@@ -1,0 +1,220 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  Container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  TitleContainer: {
+    padding: 20,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  Title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  ScrollContent: {
+    flex: 1,
+    padding: 15,
+  },
+  Section: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+  },
+  SectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 15,
+  },
+  Label: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 5,
+    fontWeight: "500",
+  },
+  Required: {
+    color: "#dc3545",
+  },
+  ButtonSelect: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 12,
+    marginBottom: 15,
+    backgroundColor: "#fff",
+  },
+  ButtonSelectText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  ButtonSelectPlaceholder: {
+    color: "#999",
+  },
+  Row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+  HalfInput: {
+    flex: 1,
+    marginRight: 10,
+  },
+  PickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    marginBottom: 15,
+  },
+  Input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 15,
+    backgroundColor: "#fff",
+  },
+  InputMultiline: {
+    height: 80,
+    textAlignVertical: "top",
+  },
+  ProductItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  ProductInfo: {
+    flex: 1,
+  },
+  ProductName: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+  },
+  ProductDetails: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 2,
+  },
+  ProductPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#28a745",
+    marginRight: 10,
+  },
+  AddButton: {
+    backgroundColor: "#32B768",
+    padding: 12,
+    borderRadius: 5,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  AddButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  TotalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  TotalLabel: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  TotalValue: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#28a745",
+  },
+  SaveButton: {
+    backgroundColor: "#28a745",
+    padding: 15,
+    margin: 15,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  SaveButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  ModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  ModalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  ModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  ModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  SearchInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  ListItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  ListItemText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  EmptyText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#999",
+    marginTop: 20,
+  },
+  OptionItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
+  OptionText: {
+    fontSize: 16,
+    color: "#333",
+  },
+  OptionTextSelected: {
+    color: "#32B768",
+    fontWeight: "600",
+  },
+});

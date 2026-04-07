@@ -1,0 +1,5 @@
+2025-12-05 00:38:56 - SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'id_compra' cannot be null
+2025-12-05 00:39:18 - SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'id_compra' cannot be null
+2025-12-05 00:41:28 - SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'id_compra' cannot be null
+2025-12-05 00:41:47 - SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'id_compra' cannot be null
+2025-12-09 23:44:24 - SQLSTATE[42S22]: Column not found: 1054 Unknown column 'forn' in 'field list'

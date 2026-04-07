@@ -1,0 +1,200 @@
+[31-Oct-2025 19:31:05 America/Sao_Paulo] PHP Warning:  Undefined variable $pdo in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 41
+[31-Oct-2025 19:31:05 America/Sao_Paulo] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php:41
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 41
+[31-Oct-2025 19:32:55 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 19:55:02 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 19:55:02 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 19:55:40 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 19:55:40 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 20:04:17 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[31-Oct-2025 20:07:47 America/Sao_Paulo] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:10:07 Europe/Berlin] PHP Parse error:  syntax error, unexpected token "<", expecting end of file in C:\xampp\htdocs\apiFinanceiroAula3\conexao.php on line 2
+[01-Nov-2025 00:10:44 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:14:54 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:50 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:51 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:51 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:51 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:51 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:15:51 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:25 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:17:45 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:07 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:18:15 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:23:23 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:27:27 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:28:12 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 00:35:49 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: try_include(): Argument #1 ($paths) must be of type array, string given, called in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 21 and defined in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php:10
+Stack trace:
+#0 C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php(21): try_include('C:\\xampp\\htdocs...')
+#1 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 10
+[01-Nov-2025 00:38:05 Europe/Berlin] PHP Fatal error:  Uncaught TypeError: try_include(): Argument #1 ($paths) must be of type array, string given, called in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 21 and defined in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php:10
+Stack trace:
+#0 C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php(21): try_include('C:\\xampp\\htdocs...')
+#1 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\produtos\listar_estoque.php on line 10
+[01-Nov-2025 01:00:05 Europe/Berlin] upload.php: move_uploaded_file falhou. tmp_name: C:\xampp\tmp\php7427.tmp dest: C:\xampp\htdocs\apiFinanceiroAula3\produtos/../uploads/img_69054d85756a6.jpg
+[01-Nov-2025 01:00:06 Europe/Berlin] upload.php: move_uploaded_file falhou. tmp_name: C:\xampp\tmp\php7706.tmp dest: C:\xampp\htdocs\apiFinanceiroAula3\produtos/../uploads/img_69054d8618ad9.jpg
+[01-Nov-2025 02:57:17 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\phpC29E.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 02:57:17 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\phpC29E.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_690568fd8f569.jpg
+[01-Nov-2025 03:01:03 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php362A.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 03:01:03 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php362A.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_690569dfdd9f1.jpg
+[01-Nov-2025 03:04:30 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php5ACB.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 03:04:30 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php5ACB.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_69056aae0117f.jpg
+[01-Nov-2025 03:06:22 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php1492.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 03:06:22 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php1492.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_69056b1edf044.jpg
+[01-Nov-2025 03:09:01 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php80E0.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 03:09:01 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php80E0.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_69056bbdaad9e.jpg
+[01-Nov-2025 03:09:53 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php49FD.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 46
+[01-Nov-2025 03:09:53 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php49FD.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_69056bf1275eb.jpg
+[01-Nov-2025 20:19:09 Europe/Berlin] PHP Warning:  copy(C:\xampp\tmp\php9EDB.tmp): Failed to open stream: No such file or directory in C:\xampp\htdocs\apiFinanceiroAula3\produtos\upload.php on line 48
+[01-Nov-2025 20:19:09 Europe/Berlin] upload.php: falha ao mover arquivo tmp: C:\xampp\tmp\php9EDB.tmp -> C:\xampp\htdocs\apiFinanceiroAula3\produtos/photos/img_69065d2db8ccd.jpg
+[01-Nov-2025 20:19:09 Europe/Berlin] upload.php: is_uploaded_file=0
+[01-Nov-2025 20:55:24 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[01-Nov-2025 22:09:10 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:09:10 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:09:10 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:09:10 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:09:33 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:09:49 Europe/Berlin] mov/listar.php error: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php called - data: [2025-11-01 00:00:00] data1: [2025-11-01 23:59:59] lanc: [Caixa]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(54): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php called - data: [2025-11-01 00:00:00] data1: [2025-11-01 23:59:59] lanc: [Caixa]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(54): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php called - data: [2025-11-01 00:00:00] data1: [2025-11-01 23:59:59] lanc: []
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(54): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php called - data: [2025-11-01 00:00:00] data1: [2025-11-01 23:59:59] lanc: []
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY]
+[01-Nov-2025 22:11:30 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'financeiro.mov' doesn't exist trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(54): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:14:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:35 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:35 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:14:44 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:44 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:44 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:14:44 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:14:44 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:14:44 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:15:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:15:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:15:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:15:09 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:15:09 Europe/Berlin] PHP Fatal error:  Uncaught Error: Call to undefined function ensureDateTime() in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php:18
+Stack trace:
+#0 {main}
+  thrown in C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php on line 18
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php using table: movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET] table=movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'data_emissao' in 'field list' trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(75): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php using table: movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET] table=movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'data_emissao' in 'field list' trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(75): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php using table: movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY] table=movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'data_emissao' in 'field list' trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(75): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php connected database: financeiro
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php tables: bancarias, bancos, caixa, cat_despesas, cat_produtos, clientes, cobrancas, compras, contas_despesa, contas_pagar, contas_receber, despesas, formas_pgtos, fornecedores, frequencias, itens_compra, itens_venda, movimentacoes, niveis, produtos, usuarios, valor_parcial, vendas
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php using table: movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php SQL prepared. start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY] table=movimentacoes
+[01-Nov-2025 22:17:02 Europe/Berlin] mov/listar.php exception: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'data_emissao' in 'field list' trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(75): PDO->prepare('SELECT id,\r\n   ...')
+#1 {main}
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php SQL prepared table=movimentacoes start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET]
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php SQL prepared table=movimentacoes start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[SET]
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php exception: SQLSTATE[HY093]: Invalid parameter number trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(109): PDOStatement->execute()
+#1 {main}
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php exception: SQLSTATE[HY093]: Invalid parameter number trace: #0 C:\xampp\htdocs\apiFinanceiroAula3\mov\listar.php(109): PDOStatement->execute()
+#1 {main}
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php SQL prepared table=movimentacoes start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY]
+[01-Nov-2025 22:18:46 Europe/Berlin] mov/listar.php SQL prepared table=movimentacoes start=2025-11-01 00:00:00 end=2025-11-01 23:59:59 lanc=[EMPTY]
+[04-Nov-2025 22:26:22 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:02:29 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:13:44 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:15:59 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:19:35 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:20:26 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:24:57 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:31:31 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:32:49 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:33:13 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:35:29 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).
+[02-Jan-2026 21:41:44 Europe/Berlin] listar_estoque exception: Conexão com o banco de dados não encontrada ($pdo inválido).

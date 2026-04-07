@@ -1,0 +1,311 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"for",
+				"fornecedor"
+			],
+			[
+				"l",
+				"lucro"
+			],
+			[
+				"ph",
+				"photo"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/buscar.php",
+			"settings":
+			{
+				"buffer_size": 824,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"Bookmarks: Select All"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 130.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/C/xampp/htdocs/apiFinanceiroAula3/conexao.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/vendas/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/mov/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/mov/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categorias/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/clientes/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/despesas/listar_bancos.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categdesp/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categdesp/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categdesp/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categdesp/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/categdesp/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/catdespesa/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/catdespesa/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/catdespesa/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/catdespesa/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/catdespesa/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/baixar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/baixar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/calcular.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/receber/parcelar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/listar_bancos.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/usuarios/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/mov/imprimir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/upload.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/photos/th teeee.jpg",
+		"/C/xampp/htdocs/apiFinanceiroAula3/compras/listar-prod.php",
+		"/C/xampp/htdocs/apiFinanceiro6/compras/listar-prod.php",
+		"/C/xampp/htdocs/apiFinanceiro6/compras/listar-itens.php",
+		"/C/xampp/htdocs/apiFinanceiro6/receber/listar.php",
+		"/C/xampp/htdocs/apiFinanceiro6/receber/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiro6/conexao.php",
+		"/C/xampp/htdocs/apiFinanceiro6/receber/calcular.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/relatorios/config.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/compras/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/salvar_compra.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/mov/listar_lanc.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/Receber/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/Receber/listar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/Receber/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/parcelar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/calcular.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/vendas/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/compras/parcelar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/pagar/upload.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/vendas/parcelar.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/produtos/buscar_estoque.php",
+		"/C/xampp/htdocs/apiFinanceiroAula3/dashboard/ListAllCards.php",
+		"/C/xampp/htdocs/apiFinanceiro/dashboard/ListAllCards.php",
+		"/C/xampp/htdocs/apiFinanceiro/conexao.php",
+		"/C/xampp/htdocs/apiFinanceiro/clientes/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiro/receber/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiro/receber/listar.php",
+		"/C/xampp/htdocs/apiFinanceiro/receber/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiro/pagar/listar.php",
+		"/C/xampp/htdocs/apiFinanceiro/receber/listar_desp.php",
+		"/C/xampp/htdocs/apiFinanceiro/produtos/listar.php",
+		"/C/xampp/htdocs/apiFinanceiro/produtos/buscar_estoque.php",
+		"/C/xampp/htdocs/apiFinanceiro/receber/baixar.php",
+		"/C/xampp/htdocs/apiFinanceiro/fornecedor/buscar.php",
+		"/C/xampp/htdocs/apiFinanceiro/fornecedor/excluir.php",
+		"/C/xampp/htdocs/apiFinanceiro/fornecedor/listar.php",
+		"/C/xampp/htdocs/apiFinanceiro/fornecedor/listar_id.php",
+		"/C/xampp/htdocs/apiFinanceiro/fornecedor/salvar.php",
+		"/C/xampp/htdocs/apiFinanceiro/clientes/listar.php",
+		"/C/xampp/htdocs/apiModelo/conexao.php",
+		"/C/xampp/htdocs/apiModelo/login/login.php"
+	],
+	"find":
+	{
+		"height": 39.0
+	},
+	"find_in_files":
+	{
+		"height": 101.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "/C/xampp/htdocs/apiFinanceiroAula3/fornecedores/buscar.php",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 824,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/PHP/PHP.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 39.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "buscar.sublime-project",
+	"replace":
+	{
+		"height": 70.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 197.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

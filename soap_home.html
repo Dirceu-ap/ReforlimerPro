@@ -1,0 +1,96 @@
+
+		<html><head><title>NuSOAP: NfseWSService</title>
+		<style type="text/css">
+		    body    { font-family: arial; color: #000000; background-color: #ffffff; margin: 0px 0px 0px 0px; }
+		    p       { font-family: arial; color: #000000; margin-top: 0px; margin-bottom: 12px; }
+		    pre { background-color: silver; padding: 5px; font-family: Courier New; font-size: x-small; color: #000000;}
+		    ul      { margin-top: 10px; margin-left: 20px; }
+		    li      { list-style-type: none; margin-top: 10px; color: #000000; }
+		    .content{
+			margin-left: 0px; padding-bottom: 2em; }
+		    .nav {
+			padding-top: 10px; padding-bottom: 10px; padding-left: 15px; font-size: .70em;
+			margin-top: 10px; margin-left: 0px; color: #000000;
+			background-color: #ccccff; width: 20%; margin-left: 20px; margin-top: 20px; }
+		    .title {
+			font-family: arial; font-size: 26px; color: #ffffff;
+			background-color: #999999; width: 100%;
+			margin-left: 0px; margin-right: 0px;
+			padding-top: 10px; padding-bottom: 10px;}
+		    .hidden {
+			position: absolute; visibility: hidden; z-index: 200; left: 250px; top: 100px;
+			font-family: arial; overflow: hidden; width: 600;
+			padding: 20px; font-size: 10px; background-color: #999999;
+			layer-background-color:#FFFFFF; }
+		    a,a:active  { color: charcoal; font-weight: bold; }
+		    a:visited   { color: #666666; font-weight: bold; }
+		    a:hover     { color: cc3300; font-weight: bold; }
+		</style>
+		<script language="JavaScript" type="text/javascript">
+		<!--
+		// POP-UP CAPTIONS...
+		function lib_bwcheck(){ //Browsercheck (needed)
+		    this.ver=navigator.appVersion
+		    this.agent=navigator.userAgent
+		    this.dom=document.getElementById?1:0
+		    this.opera5=this.agent.indexOf("Opera 5")>-1
+		    this.ie5=(this.ver.indexOf("MSIE 5")>-1 && this.dom && !this.opera5)?1:0;
+		    this.ie6=(this.ver.indexOf("MSIE 6")>-1 && this.dom && !this.opera5)?1:0;
+		    this.ie4=(document.all && !this.dom && !this.opera5)?1:0;
+		    this.ie=this.ie4||this.ie5||this.ie6
+		    this.mac=this.agent.indexOf("Mac")>-1
+		    this.ns6=(this.dom && parseInt(this.ver) >= 5) ?1:0;
+		    this.ns4=(document.layers && !this.dom)?1:0;
+		    this.bw=(this.ie6 || this.ie5 || this.ie4 || this.ns4 || this.ns6 || this.opera5)
+		    return this
+		}
+		var bw = new lib_bwcheck()
+		//Makes crossbrowser object.
+		function makeObj(obj){
+		    this.evnt=bw.dom? document.getElementById(obj):bw.ie4?document.all[obj]:bw.ns4?document.layers[obj]:0;
+		    if(!this.evnt) return false
+		    this.css=bw.dom||bw.ie4?this.evnt.style:bw.ns4?this.evnt:0;
+		    this.wref=bw.dom||bw.ie4?this.evnt:bw.ns4?this.css.document:0;
+		    this.writeIt=b_writeIt;
+		    return this
+		}
+		// A unit of measure that will be added when setting the position of a layer.
+		//var px = bw.ns4||window.opera?"":"px";
+		function b_writeIt(text){
+		    if (bw.ns4){this.wref.write(text);this.wref.close()}
+		    else this.wref.innerHTML = text
+		}
+		//Shows the messages
+		var oDesc;
+		function popup(divid){
+		    if(oDesc = new makeObj(divid)){
+			oDesc.css.visibility = "visible"
+		    }
+		}
+		function popout(){ // Hides message
+		    if(oDesc) oDesc.css.visibility = "hidden"
+		}
+		//-->
+		</script>
+		</head>
+		<body>
+		<div class=content>
+			<br><br>
+			<div class=title>NfseWSService</div>
+			<div class=nav>
+				<p>View the <a href="/api/soap/homologacao_notafiscal.php?wsdl">WSDL</a> for the service.
+				Click on an operation name to view it&apos;s details.</p>
+				<ul><li><a href='#' onclick="popout();popup('CancelarNfse')">CancelarNfse</a></li><div id='CancelarNfse' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> CancelarNfse<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/CancelarNfse<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: CancelarNfseRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:CancelarNfseRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: CancelarNfseResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:CancelarNfseResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('ConsultarLoteRps')">ConsultarLoteRps</a></li><div id='ConsultarLoteRps' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> ConsultarLoteRps<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/ConsultarLoteRps<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarLoteRpsRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarLoteRpsRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarLoteRpsResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarLoteRpsResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('ConsultarNfseServicoPrestado')">ConsultarNfseServicoPrestado</a></li><div id='ConsultarNfseServicoPrestado' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> ConsultarNfseServicoPrestado<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/ConsultarNfseServicoPrestado<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfseServicoPrestadoRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfseServicoPrestadoRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfseServicoPrestadoResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfseServicoPrestadoResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('ConsultarNfseServicoTomado')">ConsultarNfseServicoTomado</a></li><div id='ConsultarNfseServicoTomado' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> ConsultarNfseServicoTomado<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/ConsultarNfseServicoTomado<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfseServicoTomadoRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfseServicoTomadoRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfseServicoTomadoResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfseServicoTomadoResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('ConsultarNfsePorFaixa')">ConsultarNfsePorFaixa</a></li><div id='ConsultarNfsePorFaixa' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> ConsultarNfsePorFaixa<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/ConsultarNfsePorFaixa<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfsePorFaixaRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfsePorFaixaRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfsePorFaixaResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfsePorFaixaResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('ConsultarNfsePorRps')">ConsultarNfsePorRps</a></li><div id='ConsultarNfsePorRps' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> ConsultarNfsePorRps<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/ConsultarNfsePorRps<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfsePorRpsRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfsePorRpsRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: ConsultarNfsePorRpsResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:ConsultarNfsePorRpsResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('RecepcionarLoteRps')">RecepcionarLoteRps</a></li><div id='RecepcionarLoteRps' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> RecepcionarLoteRps<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/RecepcionarLoteRps<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: RecepcionarLoteRpsRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:RecepcionarLoteRpsRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: RecepcionarLoteRpsResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:RecepcionarLoteRpsResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('GerarNfse')">GerarNfse</a></li><div id='GerarNfse' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> GerarNfse<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/GerarNfse<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: GerarNfseRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:GerarNfseRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: GerarNfseResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:GerarNfseResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('SubstituirNfse')">SubstituirNfse</a></li><div id='SubstituirNfse' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> SubstituirNfse<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/SubstituirNfse<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: SubstituirNfseRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:SubstituirNfseRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: SubstituirNfseResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:SubstituirNfseResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div><li><a href='#' onclick="popout();popup('RecepcionarLoteRpsSincrono')">RecepcionarLoteRpsSincrono</a></li><div id='RecepcionarLoteRpsSincrono' class='hidden'>
+				    <a href='#' onclick='popout()'><font color='#ffffff'>Close</font></a><br><br><font color='white'>Name:</font> RecepcionarLoteRpsSincrono<br><font color='white'>Binding:</font> nfseSOAP<br><font color='white'>Endpoint:</font> https://limeira.iibr.com.br/api/soap/homologacao_notafiscal.php<br><font color='white'>SoapAction:</font> http://nfse.abrasf.org.br/RecepcionarLoteRpsSincrono<br><font color='white'>Input:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: RecepcionarLoteRpsSincronoRequest<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:RecepcionarLoteRpsSincronoRequest^<br><font color='white'>Output:</font><br>&nbsp;&nbsp;use: literal<br>&nbsp;&nbsp;message: RecepcionarLoteRpsSincronoResponse<br>&nbsp;&nbsp;parts:<br>&nbsp;&nbsp;&nbsp;&nbsp;parameters: http://nfse.abrasf.org.br:RecepcionarLoteRpsSincronoResponse^<br><font color='white'>Style:</font> document<br><font color='white'>Transport:</font> http://schemas.xmlsoap.org/soap/http<br><font color='white'>Documentation:</font> <br></div>
+				<ul>
+			</div>
+		</div></body></html>

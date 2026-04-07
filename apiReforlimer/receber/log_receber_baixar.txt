@@ -1,0 +1,537 @@
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+)
+Array
+(
+    [id] => 766
+    [id_compra] => 766
+    [valor] => 1237
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.237
+    [user] => 8
+)
+Array
+(
+    [id] => 766
+    [id_compra] => 766
+    [valor] => 1237
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.237
+    [user] => 8
+)
+Array
+(
+    [id] => 798
+    [id_compra] => 798
+    [valor] => 20000.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 20
+    [user] => 8
+)
+Array
+(
+    [id] => 798
+    [id_compra] => 798
+    [valor] => 20000.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 20
+    [user] => 8
+)
+Array
+(
+    [id] => 871
+    [id_compra] => 871
+    [valor] => 5222
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 5.222
+    [user] => 8
+)
+Array
+(
+    [id] => 871
+    [id_compra] => 871
+    [valor] => 5222
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 5.222
+    [user] => 8
+)
+Array
+(
+    [id] => 872
+    [id_compra] => 872
+    [valor] => 1000
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1
+    [user] => 8
+)
+Array
+(
+    [id] => 872
+    [id_compra] => 872
+    [valor] => 1000
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1
+    [user] => 8
+)
+Array
+(
+    [id] => 790
+    [id_compra] => 790
+    [valor] => 246
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 246
+    [user] => 8
+)
+Array
+(
+    [id] => 790
+    [id_compra] => 790
+    [valor] => 246
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 246
+    [user] => 8
+)
+Array
+(
+    [id] => 876
+    [id_compra] => 876
+    [valor] => 1345.67
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.345
+    [user] => 8
+)
+Parâmetros recebidos:
+Array
+(
+    [id] => 876
+    [id_compra] => 876
+    [valor] => 1345.67
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.345
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Array
+(
+    [id] => 876
+    [id_compra] => 876
+    [valor] => 1345.67
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.345
+    [user] => 8
+)
+Parâmetros recebidos:
+Array
+(
+    [id] => 876
+    [id_compra] => 876
+    [valor] => 1345.67
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.345
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Array
+(
+    [id] => 803
+    [id_compra] => 803
+    [valor] => 526.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 526.88
+    [user] => 8
+)
+Parâmetros recebidos:
+Array
+(
+    [id] => 803
+    [id_compra] => 803
+    [valor] => 526.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 526.88
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 803
+    [id_compra] => 803
+    [valor] => 526.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 526.88
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 2.5
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 2.5
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 2.5
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 10
+    [juros] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 10
+    [multa] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [id] => 820
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 10
+    [juros] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 10
+    [multa] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [id] => 820
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 10
+    [juros] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 10
+    [multa] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [id] => 820
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 820
+    [id_compra] => 820
+    [valor] => 2500
+    [saida] => Caixa
+    [multa] => 10
+    [juros] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 10
+    [multa] => 10
+    [desconto] => 10
+    [subtotal] => 2.51
+    [id] => 820
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 800
+    [id_compra] => 800
+    [valor] => 1321.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 0
+    [multa] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [id] => 800
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 800
+    [id_compra] => 800
+    [valor] => 1321.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 0
+    [multa] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [id] => 800
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 800
+    [id_compra] => 800
+    [valor] => 1321.88
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 0
+    [multa] => 0
+    [desconto] => 0
+    [subtotal] => 1.321
+    [id] => 800
+)
+SQL gerado:
+UPDATE contas_receber SET 
+        saida = Caixa, 
+        usuario_baixa = 8, 
+        status = 'Paga', 
+        juros = 0, 
+        multa = 0, 
+        desconto = 0, 
+        subtotal = 1.321, 
+        data_baixa = CURDATE() 
+        WHERE id = 800
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 807
+    [id_compra] => 807
+    [valor] => 257.75
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 257.75
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 807
+    [id_compra] => 807
+    [valor] => 257.75
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 257.75
+    [user] => 8
+)
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
+Parâmetros recebidos:
+Array
+(
+    [id] => 807
+    [id_compra] => 807
+    [valor] => 257.75
+    [saida] => Caixa
+    [multa] => 0
+    [juros] => 0
+    [desconto] => 0
+    [subtotal] => 257.75
+    [user] => 8
+)
+Valores para atualização:
+Array
+(
+    [saida] => Caixa
+    [usuario_baixa] => 8
+    [juros] => 0
+    [multa] => 0
+    [desconto] => 0
+    [subtotal] => 257.75
+    [id] => 807
+)
+SQL gerado:
+UPDATE contas_receber SET 
+        saida = Caixa, 
+        usuario_baixa = 8, 
+        status = 'Paga', 
+        juros = 0, 
+        multa = 0, 
+        desconto = 0, 
+        subtotal = 257.75, 
+        data_baixa = CURDATE() 
+        WHERE id = 807
+Erro ao atualizar a conta: SQLSTATE[42S22]: Column not found: 1054 Unknown column 'saida' in 'field list'
