@@ -51,3 +51,6 @@ ios/build/
 logs/
 apiReforlimer/logs/
 apiReforlimer/uploads/
+apiReforlimer/api_errors.log
+apiReforlimer/img/contas/
+apiReforlimer/produtos/photos/img_*

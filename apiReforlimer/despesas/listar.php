@@ -23,8 +23,6 @@ for ($i=0; $i < count($res); $i++) {
     );
 }
 
-
-
 if(count($res) > 0){
     $result = json_encode(array('success'=>true, 'resultado'=>@$dados, 'totalItems'=>@count($dados) + ($inicio)));
 }else{

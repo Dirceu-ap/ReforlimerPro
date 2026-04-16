@@ -38,12 +38,6 @@ if($dataInicial != $dataFinal){
 
 		}
 
-		body{
-			font-family:Arial, Helvetica, sans-serif;
-			font-size:11px;
-			line-height:1.35;
-		}
-
 		.footer {
 			margin-top:20px;
 			width:100%;
@@ -56,14 +50,14 @@ if($dataInicial != $dataFinal){
 		.cabecalho {    
 			background-color: #ebebeb;
 			padding:10px;
-			margin-bottom:20px;
+			margin-bottom:30px;
 			width:100%;
 			height:100px;
 		}
 
 		.titulo{
 			margin:0;
-			font-size:22px;
+			font-size:28px;
 			font-family:Arial, Helvetica, sans-serif;
 			color:#6e6d6d;
 
@@ -71,7 +65,7 @@ if($dataInicial != $dataFinal){
 
 		.subtitulo{
 			margin:0;
-			font-size:13px;
+			font-size:17px;
 			font-family:Arial, Helvetica, sans-serif;
 		}
 
@@ -100,7 +94,7 @@ if($dataInicial != $dataFinal){
 		}
 
 		.fonte13{
-			font-size:11px;
+			font-size:13px;
 		}
 
 		.esquerda{
@@ -116,13 +110,13 @@ if($dataInicial != $dataFinal){
 		}
 
 		.table{
-			padding:10px;
+			padding:15px;
 			font-family:Verdana, sans-serif;
-			margin-top:10px;
+			margin-top:20px;
 		}
 
 		.texto-tabela{
-			font-size:11px;
+			font-size:12px;
 		}
 
 
@@ -151,21 +145,21 @@ if($dataInicial != $dataFinal){
 		}
 
 		hr{
-			margin:4px;
+			margin:8px;
 			padding:1px;
 		}
 
 
 		.titulorel{
 			margin:0;
-			font-size:22px;
+			font-size:28px;
 			font-family:Arial, Helvetica, sans-serif;
 			color:#6e6d6d;
 
 		}
 
 		.margem-superior{
-			margin-top:20px;
+			margin-top:30px;
 		}
 
 

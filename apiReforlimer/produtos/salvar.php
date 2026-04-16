@@ -49,7 +49,7 @@ function extractFilename($raw) {
 }
 
 try {
-    // Validações de unicidade (nome e codigo) - considere usar unique index no DB também
+    // Validações de unicidade (nome e codigo)
     $stmt = $pdo->prepare("SELECT id FROM $pagina WHERE nome = :nome LIMIT 1");
     $stmt->execute([':nome' => $nome]);
     $res = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -66,10 +66,9 @@ try {
         exit();
     }
 
-    // montar valor final que será salvo no campo foto no formato "<cat>\n<FILENAME>"
+    // montar valor final que será salvo no campo foto (apenas filename)
     $fotoDb = "";
     if ($foto !== "" && $foto !== null) {
-        // se cliente já enviou "CAT\nFILENAME", extraimos apenas o filename e construimos novamente para garantir consistência
         $onlyName = extractFilename($foto);
         if ($onlyName !== "") {
             $fotoDb = (string)$onlyName;

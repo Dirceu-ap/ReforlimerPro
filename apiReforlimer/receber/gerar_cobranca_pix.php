@@ -28,6 +28,14 @@ function normalizeDateYmd($value) {
     return date('Y-m-d', $ts);
 }
 
+function formatDateBr($valueYmd) {
+    $ymd = normalizeDateYmd($valueYmd);
+    if ($ymd === '') return '';
+    $parts = explode('-', $ymd);
+    if (count($parts) !== 3) return '';
+    return $parts[2] . '/' . $parts[1] . '/' . $parts[0];
+}
+
 function normalizeMoney($value) {
     $raw = trim((string)$value);
     if ($raw === '') return 0.0;
@@ -40,6 +48,21 @@ function normalizeMoney($value) {
     }
 
     return round((float)$raw, 2);
+}
+
+function parseBoolean($value) {
+    if (is_bool($value)) return $value;
+    $raw = strtolower(trim((string)$value));
+    return in_array($raw, ['1', 'true', 'yes', 'sim', 'on'], true);
+}
+
+function parsePositiveInt($value, $defaultValue) {
+    if ($value === null || $value === '') return (int)$defaultValue;
+    if (!is_numeric($value)) return (int)$defaultValue;
+    $parsed = (int)$value;
+    if ($parsed < 0) return 0;
+    if ($parsed > 365) return 365;
+    return $parsed;
 }
 
 function calculateDaysLate($dueDateYmd, $todayYmd = null) {
@@ -70,6 +93,12 @@ function calculateOverdueTotals($baseValue, $daysLate, $finePercent, $interestPe
         'total' => $total,
         'daysLate' => $days,
     ];
+}
+
+function isChargeExpiredByLateDays($daysLate, $maxDaysAfterDue) {
+    $days = max(0, (int)$daysLate);
+    $limit = max(0, (int)$maxDaysAfterDue);
+    return $days > $limit;
 }
 
 function asaasRequest($method, $path, $apiKey, $sandbox, $body = null) {
@@ -130,11 +159,34 @@ try {
     $config = require __DIR__ . '/pix_psp_config.php';
 
     $apiKey = trim((string)($config['apiKey'] ?? ''));
+    $apiKeyLooksValid = (bool)preg_match('/^\$aact_[A-Za-z0-9_\-]+$/', $apiKey);
     if ($apiKey === '' || $apiKey === 'INFORME_SUA_API_KEY_AQUI') {
+        $hasEnvApiKey = trim((string)getenv('ASAAS_API_KEY')) !== '';
+        $hasEnvAccessToken = trim((string)getenv('ASAAS_ACCESS_TOKEN')) !== '';
+        $hasEnvToken = trim((string)getenv('ASAAS_TOKEN')) !== '';
         respond([
             'success' => false,
-            'message' => 'PSP nao configurado. Defina ASAAS_API_KEY ou apiKey em receber/pix_psp_config.php',
+            'message' => 'PSP nao configurado. Defina ASAAS_API_KEY no servidor ou preencha $apiKeyManual em apiReforlimer/receber/pix_psp_config.php',
             'code' => 'PSP_NOT_CONFIGURED',
+            'diagnostic' => [
+                'env_ASAAS_API_KEY' => $hasEnvApiKey,
+                'env_ASAAS_ACCESS_TOKEN' => $hasEnvAccessToken,
+                'env_ASAAS_TOKEN' => $hasEnvToken,
+                'configFile' => 'apiReforlimer/receber/pix_psp_config.php',
+                'configField' => '$apiKeyManual',
+            ],
+        ], 400);
+    }
+
+    if (!$apiKeyLooksValid) {
+        respond([
+            'success' => false,
+            'message' => 'Chave Asaas invalida em apiReforlimer/receber/pix_psp_config.php. Formato esperado: $aact_...',
+            'code' => 'PSP_API_KEY_INVALID',
+            'diagnostic' => [
+                'configFile' => 'apiReforlimer/receber/pix_psp_config.php',
+                'configField' => '$apiKeyManual',
+            ],
         ], 400);
     }
 
@@ -150,6 +202,8 @@ try {
     $pagadorNome = trim((string)($input['pagadorNome'] ?? 'Consumidor Final'));
     $pagadorDoc = onlyDigits($input['pagadorDocumento'] ?? '');
     $descricao = trim((string)($input['descricao'] ?? 'Cobranca PIX'));
+    $dataPagamento = normalizeDateYmd($input['dataPagamento'] ?? '');
+    $forceRefresh = parseBoolean($input['forceRefresh'] ?? false);
 
     if ($idConta === '') {
         respond(['success' => false, 'message' => 'idConta obrigatorio.'], 400);
@@ -162,19 +216,47 @@ try {
     }
 
     $sandbox = (bool)($config['sandbox'] ?? true);
-    $multaPercent = (float)($config['multaPercent'] ?? 2.0);
-    $jurosPercentDia = (float)($config['jurosPercentDia'] ?? 0.0334);
+    $multaPercentConfig = (float)($config['multaPercent'] ?? 2.0);
+    $jurosPercentDiaConfig = (float)($config['jurosPercentDia'] ?? 0.0334);
+    $multaPercent = isset($input['multaPercent'])
+        ? (float)normalizeMoney($input['multaPercent'])
+        : $multaPercentConfig;
+    $jurosPercentDia = isset($input['jurosPercentDia'])
+        ? (float)normalizeMoney($input['jurosPercentDia'])
+        : $jurosPercentDiaConfig;
+
+    if ($multaPercent < 0) $multaPercent = 0;
+    if ($jurosPercentDia < 0) $jurosPercentDia = 0;
+    $maxDiasPosVencimentoConfig = 0;
+    $maxDiasPosVencimento = parsePositiveInt(
+        $input['maxDiasPosVencimento'] ?? null,
+        $maxDiasPosVencimentoConfig
+    );
 
     $customerId = trim((string)($config['defaultCustomerId'] ?? ''));
     $externalReference = 'RECEBER_' . $idConta;
 
+    $diasAtraso = calculateDaysLate($vencimento, $dataPagamento !== '' ? $dataPagamento : null);
+
+    if (isChargeExpiredByLateDays($diasAtraso, $maxDiasPosVencimento)) {
+        respond([
+            'success' => false,
+            'message' => 'Cobranca expirada para pagamento via PIX. Limite configurado de ' . $maxDiasPosVencimento . ' dia(s) apos o vencimento foi excedido.',
+            'code' => 'PIX_OVERDUE_LIMIT_EXCEEDED',
+            'diasAtraso' => $diasAtraso,
+            'maxDiasPosVencimento' => $maxDiasPosVencimento,
+        ], 422);
+    }
+
     $totals = calculateOverdueTotals(
         $valor,
-        calculateDaysLate($vencimento),
+        $diasAtraso,
         $multaPercent,
         $jurosPercentDia
     );
     $valorAtualizado = (float)$totals['total'];
+    $valorBaseCobranca = (float)$totals['base'];
+    $situacaoPix = ((int)$totals['daysLate'] > 0) ? 'Vencido' : 'A vencer';
 
     if ($customerId === '') {
         $customerBody = [
@@ -214,10 +296,11 @@ try {
     $paymentBody = [
         'customer' => $customerId,
         'billingType' => 'PIX',
-        'value' => $valorAtualizado,
+        'value' => $valorBaseCobranca,
         'dueDate' => $vencimento,
         'description' => $descricao,
         'externalReference' => $externalReference,
+        'dueDateLimitDays' => $maxDiasPosVencimento,
         'fine' => [
             'value' => $multaPercent,
             'type' => 'PERCENTAGE',
@@ -229,12 +312,25 @@ try {
 
     if ($paymentId !== '') {
         $currentValue = round((float)($payment['value'] ?? 0), 2);
-        if ($currentValue !== $valorAtualizado) {
+        $currentFineValue = round((float)($payment['fine']['value'] ?? 0), 4);
+        $currentInterestValue = round((float)($payment['interest']['value'] ?? 0), 4);
+        $currentDueDate = normalizeDateYmd($payment['dueDate'] ?? '');
+        $currentDueDateLimitDays = (int)($payment['dueDateLimitDays'] ?? 0);
+        $mustUpdatePayment =
+            $forceRefresh ||
+            ($currentValue !== $valorBaseCobranca) ||
+            ($currentFineValue !== round((float)$multaPercent, 4)) ||
+            ($currentInterestValue !== round((float)$jurosPercentDia, 4)) ||
+            ($currentDueDate !== $vencimento) ||
+            ($currentDueDateLimitDays !== $maxDiasPosVencimento);
+
+        if ($mustUpdatePayment) {
             asaasRequest('PUT', '/payments/' . $paymentId, $apiKey, $sandbox, [
-                'value' => $valorAtualizado,
+                'value' => $valorBaseCobranca,
                 'dueDate' => $vencimento,
                 'description' => $descricao,
                 'externalReference' => $externalReference,
+                'dueDateLimitDays' => $maxDiasPosVencimento,
                 'fine' => [
                     'value' => $multaPercent,
                     'type' => 'PERCENTAGE',
@@ -266,11 +362,18 @@ try {
             'txid' => (string)($payment['externalReference'] ?? ('RECEBER_' . $idConta)),
             'status' => (string)($payment['status'] ?? ''),
             'vencimento' => $vencimento,
+            'vencimentoF' => formatDateBr($vencimento),
+            'situacao' => $situacaoPix,
         ],
         'pix' => [
             'valorOriginal' => $valor,
-            'valor' => (float)($payment['value'] ?? $valorAtualizado),
+            'valorBaseCobranca' => (float)($payment['value'] ?? $valorBaseCobranca),
+            'valor' => $valorAtualizado,
             'diasAtraso' => (int)$totals['daysLate'],
+            'maxDiasPosVencimento' => $maxDiasPosVencimento,
+            'situacao' => $situacaoPix,
+            'dataPagamento' => ($dataPagamento !== '' ? $dataPagamento : date('Y-m-d')),
+            'dataPagamentoF' => formatDateBr($dataPagamento !== '' ? $dataPagamento : date('Y-m-d')),
             'multaPercent' => $multaPercent,
             'multaValor' => (float)$totals['fine'],
             'jurosPercentDia' => $jurosPercentDia,

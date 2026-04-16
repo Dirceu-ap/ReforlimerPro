@@ -1,32 +1,50 @@
 <?php
+
+header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json; charset=utf-8');
-require_once(__DIR__ . "/../conexao.php");
+
+require_once('../conexao.php');
+
+$id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+if ($id <= 0) {
+    echo json_encode(['sucesso' => false, 'mensagem' => 'ID inválido']);
+    exit;
+}
 
 try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $id = $_GET['id'] ?? null;
-    if (!$id) {
-        echo json_encode(['sucesso' => false, 'mensagem' => 'ID ausente']);
-        exit;
-    }
-
-    // opcional: buscar referência de conta e remover link
-    $stmt = $pdo->prepare("SELECT conta_pagar_id, conta_receber_id FROM orcamentos WHERE id=?");
-    $stmt->execute([$id]);
-    $ref = $stmt->fetch(PDO::FETCH_ASSOC);
-
     $pdo->beginTransaction();
-    $pdo->prepare("DELETE FROM orcamento_produtos WHERE orcamento_id=?")->execute([$id]);
-    $pdo->prepare("DELETE FROM orcamentos WHERE id=?")->execute([$id]);
 
-    // opcional: não excluir contas automaticamente — se quiser, descomente
-    // if (!empty($ref['conta_pagar_id'])) { $pdo->prepare("DELETE FROM contas_pagar WHERE id=?")->execute([$ref['conta_pagar_id']]); }
-    // if (!empty($ref['conta_receber_id'])) { $pdo->prepare("DELETE FROM contas_receber WHERE id=?")->execute([$ref['conta_receber_id']]); }
+    // Exclui produtos vinculados ao orçamento (ajuste o nome da tabela se necessário)
+    $stmtItens = $pdo->prepare('DELETE FROM orcamento_produtos WHERE orcamento_id = :id');
+    $stmtItens->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmtItens->execute();
 
-    $pdo->commit();
-    echo json_encode(['sucesso' => true, 'mensagem' => 'Excluído']);
+    // Exclui o orçamento principal
+    $stmt = $pdo->prepare('DELETE FROM orcamentos WHERE id = :id');
+    $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+    $stmt->execute();
+
+    if ($stmt->rowCount() > 0) {
+        $pdo->commit();
+        echo json_encode([
+            'sucesso'  => true,
+            'mensagem' => 'Orçamento excluído com sucesso'
+        ]);
+    } else {
+        $pdo->rollBack();
+        echo json_encode([
+            'sucesso'  => false,
+            'mensagem' => 'Orçamento não encontrado'
+        ]);
+    }
 } catch (Exception $e) {
-    if ($pdo->inTransaction()) $pdo->rollBack();
-    echo json_encode(['sucesso' => false, 'mensagem' => $e->getMessage()]);
+    if ($pdo && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    echo json_encode([
+        'sucesso'  => false,
+        'mensagem' => 'Erro: ' . $e->getMessage()
+    ]);
 }
-?>

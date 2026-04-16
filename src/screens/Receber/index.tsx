@@ -18,6 +18,9 @@ import {
   TouchableOpacity,
   View,
   Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  TouchableWithoutFeedback,
 } from "react-native";
 // Linking via require para evitar conflitos de tipo com TypeScript
 const { Linking } = require("react-native");
@@ -51,27 +54,49 @@ interface ContaReceber {
   cliente: string;
   vencimento: string;
   descricao: string;
-  valor: string;
-  valor_antigo?: string;
+  plano?: string;
+  local?: string;
+  valor: string | number;
+  valor_antigo?: string | number;
   frequencia?: string;
   saida?: string;
-  multa?: string;
-  juros?: string;
-  desconto?: string;
-  desconto_perc?: string;
-  acrescimo?: string;
-  acrescimo_perc?: string;
+  multa?: string | number;
+  juros?: string | number;
+  desconto?: string | number;
+  desconto_perc?: string | number;
+  acrescimo?: string | number;
+  acrescimo_perc?: string | number;
   arquivo?: string;
   tumb?: string;
   status?: string;
 }
 
 interface BeneficiarioCobranca {
+  id?: string;
   nome: string;
   documento: string;
   endereco: string;
   pixChave: string;
   cidade?: string;
+  usePsp?: boolean;
+}
+
+interface BeneficiarioRule {
+  id: string;
+  enabled?: boolean;
+  criteria?: {
+    localContains?: string[];
+    planContains?: string[];
+    descriptionContains?: string[];
+    requirePlanAndDescription?: boolean;
+  };
+  beneficiary: BeneficiarioCobranca;
+  pix?: {
+    usePsp?: boolean;
+    multaPercent?: number;
+    jurosPercentDia?: number;
+    maxDiasPosVencimento?: number;
+  };
 }
 
 function Receber() {
@@ -94,17 +119,28 @@ function Receber() {
   const [emissao, setEmissao] = useState("");
   const [freq, setFreq] = useState("");
   const [vencIso, setVencIso] = useState("");
+  const [dataPagamentoPix, setDataPagamentoPix] = useState(
+    format(new Date(), "dd/MM/yyyy"),
+  );
+  const [maxDiasPosVencimentoEscolhido, setMaxDiasPosVencimentoEscolhido] =
+    useState<string>("");
   const [arq, setArq] = useState("");
   const [usu, setUsu] = useState("");
   const [tumb, setTumb] = useState("");
   const [tel, setTel] = useState("");
   const [beneficiario, setBeneficiario] = useState<BeneficiarioCobranca>({
+    id: "reforlimer",
     nome: "Reforlimer reformas e construcoes",
     documento: "CNPJ: INFORMAR",
     endereco: "Avenida Laranjeiras, n 701",
     pixChave: "INFORMAR_CHAVE_PIX",
     cidade: "Limeira",
+    usePsp: true,
   });
+  const [regrasBeneficiario, setRegrasBeneficiario] = useState<
+    BeneficiarioRule[]
+  >([]);
+  const [pdfDiagnostics, setPdfDiagnostics] = useState<boolean>(false);
 
   // Busca habilitada para qualquer tamanho de texto
   const MIN_SEARCH_LENGTH = 0;
@@ -127,6 +163,9 @@ function Receber() {
 
   const [date2, setDate2] = useState<any>(new Date());
   const [show2, setShow2] = useState(false);
+  const [datePagamentoPix, setDatePagamentoPix] = useState<Date>(new Date());
+  const [showDataPagamentoPix, setShowDataPagamentoPix] =
+    useState<boolean>(false);
   const lastAutoSearchRef = useRef<string>("__INIT__");
   const didInitAutoSearchRef = useRef(false);
   const latestRequestRef = useRef(0);
@@ -159,8 +198,46 @@ function Receber() {
     return parseFloat(raw) || 0;
   }, []);
 
+  const parseDateFlexible = useCallback((value: any): Date | null => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      const [y, m, d] = raw.substring(0, 10).split("-").map(Number);
+      return new Date(y, (m || 1) - 1, d || 1);
+    }
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+      const [d, m, y] = raw.split("/").map(Number);
+      return new Date(y, (m || 1) - 1, d || 1);
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, []);
+
+  const normalizeDateForPix = useCallback(
+    (value: string) => {
+      const parsed = parseDateFlexible(value);
+      if (!parsed) {
+        return format(new Date(), "yyyy-MM-dd");
+      }
+      return format(parsed, "yyyy-MM-dd");
+    },
+    [parseDateFlexible],
+  );
+
+  const parseMaxDiasPosVencimentoInput = useCallback((value: string) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return null;
+    if (!/^\d+$/.test(raw)) return null;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return null;
+    return Math.max(0, Math.min(365, Math.floor(parsed)));
+  }, []);
+
   const calcularValorTituloCorrigido = useCallback(
-    (item: Partial<ContaReceber>) => {
+    (item: Partial<ContaReceber>, dataBasePagamento?: Date) => {
       const valorOriginal = parseMoney(String(item.valor ?? "0"));
 
       const acrescimoValor = parseMoney(String(item.acrescimo ?? "0"));
@@ -182,7 +259,7 @@ function Receber() {
         }
       }
 
-      const hoje = new Date();
+      const hoje = dataBasePagamento ?? new Date();
       const hojeSemHora = new Date(
         hoje.getFullYear(),
         hoje.getMonth(),
@@ -445,6 +522,21 @@ function Receber() {
     setShow2(true);
   };
 
+  const onChangeDataPagamentoPix = (event: any, selectedDate?: Date) => {
+    if (event?.type === "dismissed") {
+      setShowDataPagamentoPix(false);
+      return;
+    }
+
+    const currentDate = selectedDate || datePagamentoPix;
+    setDatePagamentoPix(currentDate);
+    setDataPagamentoPix(format(currentDate, "dd/MM/yyyy"));
+
+    if (Platform.OS === "android") {
+      setShowDataPagamentoPix(false);
+    }
+  };
+
   async function loadData(id_reg: string) {
     try {
       setLoading(true);
@@ -462,6 +554,10 @@ function Receber() {
       setUsu(res.data.dados.usu);
       setTumb(res.data.dados.tumb);
       setTel(res.data.dados.tel);
+      const hoje = new Date();
+      setDatePagamentoPix(hoje);
+      setDataPagamentoPix(format(hoje, "dd/MM/yyyy"));
+      setMaxDiasPosVencimentoEscolhido("");
       setAbrirModal(true);
       setLoading(false);
     } catch (error) {
@@ -869,7 +965,7 @@ function Receber() {
 
           if (dataVencSemHora >= hojeSemHora) return null;
 
-          const valorOriginal = parseMoney(item.valor);
+          const valorOriginal = parseMoney(String(item.valor ?? "0"));
 
           const acrescimoValor = parseMoney(String(item.acrescimo ?? "0"));
           const acrescimoPerc = parseMoney(String(item.acrescimo_perc ?? "0"));
@@ -889,7 +985,7 @@ function Receber() {
             ),
           );
 
-          const multaBase = valorOriginal * 0.02;
+          const multaBase = valorOriginal * 0.1;
           const multa = multaBase + acrescimoTotal;
           const juros = valorOriginal * 0.000334 * diasAtraso;
           const totalAtualizado = Math.max(
@@ -934,7 +1030,7 @@ function Receber() {
             0,
           )
         : dadosRelatorio.reduce(
-            (acc, item) => acc + (parseMoney(item.valor) || 0),
+            (acc, item) => acc + (parseMoney(String(item.valor ?? "0")) || 0),
             0,
           );
 
@@ -1025,7 +1121,7 @@ function Receber() {
                   `;
                     }
 
-                    const valorNum = parseMoney(item.valor);
+                    const valorNum = parseMoney(String(item.valor ?? "0"));
                     return `
                     <tr>
                       <td>${cliente}</td>
@@ -1072,15 +1168,79 @@ function Receber() {
     try {
       const res = await api.get("receber/dados_cobranca.php");
       const b = res?.data?.beneficiario;
+      const regras = Array.isArray(res?.data?.regrasBeneficiario)
+        ? res.data.regrasBeneficiario
+        : [];
+      setPdfDiagnostics(Boolean(res?.data?.pdfDiagnostics));
       if (b) {
         setBeneficiario({
+          id: String(b?.id ?? "default"),
           nome: String(b?.nome ?? "Reforlimer reformas e construcoes"),
           documento: String(b?.documento ?? "CNPJ: INFORMAR"),
           endereco: String(b?.endereco ?? "Avenida Laranjeiras, n 701"),
           pixChave: String(b?.pixChave ?? "INFORMAR_CHAVE_PIX"),
           cidade: String(b?.cidade ?? "Limeira"),
+          usePsp: b?.usePsp === undefined ? true : Boolean(b?.usePsp),
         });
       }
+
+      setRegrasBeneficiario(
+        regras
+          .map((r: any) => ({
+            id: String(r?.id ?? ""),
+            enabled: r?.enabled === undefined ? true : Boolean(r?.enabled),
+            criteria: {
+              localContains: Array.isArray(r?.criteria?.localContains)
+                ? r.criteria.localContains.map((x: any) => String(x))
+                : [],
+              planContains: Array.isArray(r?.criteria?.planContains)
+                ? r.criteria.planContains.map((x: any) => String(x))
+                : [],
+              descriptionContains: Array.isArray(
+                r?.criteria?.descriptionContains,
+              )
+                ? r.criteria.descriptionContains.map((x: any) => String(x))
+                : [],
+              requirePlanAndDescription: Boolean(
+                r?.criteria?.requirePlanAndDescription,
+              ),
+            },
+            beneficiary: {
+              id: String(r?.beneficiary?.id ?? r?.id ?? ""),
+              nome: String(r?.beneficiary?.nome ?? ""),
+              documento: String(r?.beneficiary?.documento ?? ""),
+              endereco: String(r?.beneficiary?.endereco ?? ""),
+              pixChave: String(r?.beneficiary?.pixChave ?? ""),
+              cidade: String(r?.beneficiary?.cidade ?? "Limeira"),
+              usePsp:
+                r?.beneficiary?.usePsp === undefined
+                  ? true
+                  : Boolean(r?.beneficiary?.usePsp),
+            },
+            pix: {
+              usePsp:
+                r?.pix?.usePsp === undefined
+                  ? undefined
+                  : Boolean(r?.pix?.usePsp),
+              multaPercent:
+                r?.pix?.multaPercent === undefined ||
+                r?.pix?.multaPercent === null
+                  ? undefined
+                  : Number(r?.pix?.multaPercent),
+              jurosPercentDia:
+                r?.pix?.jurosPercentDia === undefined ||
+                r?.pix?.jurosPercentDia === null
+                  ? undefined
+                  : Number(r?.pix?.jurosPercentDia),
+              maxDiasPosVencimento:
+                r?.pix?.maxDiasPosVencimento === undefined ||
+                r?.pix?.maxDiasPosVencimento === null
+                  ? undefined
+                  : Number(r?.pix?.maxDiasPosVencimento),
+            },
+          }))
+          .filter((r: BeneficiarioRule) => r.id && r.beneficiary?.pixChave),
+      );
     } catch (error) {
       console.log("Erro ao carregar beneficiario da cobranca:", error);
     }
@@ -1088,6 +1248,9 @@ function Receber() {
 
   const gerarBoletoPixCobrancaPDF = useCallback(async () => {
     try {
+      Keyboard.dismiss();
+      const dataPagamentoYmd = normalizeDateForPix(dataPagamentoPix);
+      const dataBasePagamento = parseISO(dataPagamentoYmd);
       const selecionadas = Object.values(selectedContas);
       const idsSelecionados = selecionadas
         .map((conta) => String(conta.id || "").trim())
@@ -1125,6 +1288,9 @@ function Receber() {
               desconto_perc: String(dados?.desconto_perc ?? "0"),
               acrescimo: String(dados?.acrescimo ?? "0"),
               acrescimo_perc: String(dados?.acrescimo_perc ?? "0"),
+              plano: String(dados?.plano ?? ""),
+              descricaoConta: String(dados?.descricao ?? ""),
+              local: String(dados?.local ?? ""),
               doc: String(dados?.doc ?? ""),
               tel: String(dados?.tel ?? ""),
             };
@@ -1140,6 +1306,9 @@ function Receber() {
               desconto_perc: String(base?.desconto_perc ?? "0"),
               acrescimo: String(base?.acrescimo ?? "0"),
               acrescimo_perc: String(base?.acrescimo_perc ?? "0"),
+              plano: String(base?.plano ?? ""),
+              descricaoConta: String(base?.descricao ?? ""),
+              local: String(base?.local ?? ""),
               doc: String(doc ?? ""),
               tel: String(tel ?? ""),
             };
@@ -1147,36 +1316,41 @@ function Receber() {
         }),
       );
 
-      const titulosCalculados = detalhesTitulos.map((item) => ({
+      let titulosCalculados = detalhesTitulos.map((item) => ({
         ...item,
-        ...calcularValorTituloCorrigido(item),
+        ...calcularValorTituloCorrigido(item, dataBasePagamento),
       }));
 
       let totalCobrar = titulosCalculados.reduce(
         (acc, item) => acc + item.totalCobrar,
         0,
       );
+      const totalBaseCobranca = titulosCalculados.reduce(
+        (acc, item) =>
+          acc +
+          Math.max(
+            0,
+            item.valorOriginal + item.acrescimoTotal - item.descontoTotal,
+          ),
+        0,
+      );
       const valorBase = titulosCalculados.reduce(
         (acc, item) => acc + item.valorOriginal,
         0,
       );
-      const multaExibirInicial = titulosCalculados.reduce(
+      let multaExibirInicial = titulosCalculados.reduce(
         (acc, item) => acc + item.multa,
         0,
       );
-      const jurosExibirInicial = titulosCalculados.reduce(
+      let jurosExibirInicial = titulosCalculados.reduce(
         (acc, item) => acc + item.juros,
         0,
       );
-      const acrescimoExibir = titulosCalculados.reduce(
-        (acc, item) => acc + item.acrescimoTotal,
-        0,
-      );
-      const descontoExibir = titulosCalculados.reduce(
+      let descontoExibir = titulosCalculados.reduce(
         (acc, item) => acc + item.descontoTotal,
         0,
       );
-      const diasAtrasoExibirInicial = Math.max(
+      let diasAtrasoExibirInicial = Math.max(
         0,
         ...titulosCalculados.map((item) => item.diasAtraso),
       );
@@ -1197,9 +1371,30 @@ function Receber() {
         return format(new Date(), "yyyy-MM-dd");
       };
 
+      const formatVencimentoTitulo = (vIso: string, vBr: string) => {
+        if (vBr && vBr.includes("/")) {
+          return vBr;
+        }
+        if (vIso) {
+          const parsed = parseISO(vIso);
+          if (!isNaN(parsed.getTime())) {
+            return format(parsed, "dd/MM/yyyy");
+          }
+        }
+        return "-";
+      };
+
       let multaExibir = multaExibirInicial;
       let jurosExibir = jurosExibirInicial;
       let diasAtrasoExibir = diasAtrasoExibirInicial;
+      let maxDiasPosVencimentoAplicado = 0;
+      let maxDiasPosVencimentoExibir = maxDiasPosVencimentoAplicado;
+      let situacaoPixExibir =
+        diasAtrasoExibirInicial > 0 ? "Vencido" : "A vencer";
+      let vencimentoPixExibir = formatVencimentoTitulo(
+        String(titulosCalculados[0]?.vencimento ?? ""),
+        String(titulosCalculados[0]?.vencF ?? ""),
+      );
 
       const valorFmt = (n: number) =>
         n.toLocaleString("pt-BR", {
@@ -1207,7 +1402,346 @@ function Receber() {
           maximumFractionDigits: 2,
         });
 
+      const normalizeRuleText = (value: string) =>
+        String(value ?? "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .trim();
+
+      const containsAny = (text: string, tokens: string[]) => {
+        const source = normalizeRuleText(text);
+        if (!tokens.length) return true;
+        return tokens.some((t) => source.includes(normalizeRuleText(t)));
+      };
+
+      const detectRuleForTitulo = (titulo: any) => {
+        const localVal = String(titulo?.local ?? "");
+        const planoVal = String(titulo?.plano ?? "");
+        const descVal = String(titulo?.descricaoConta ?? "");
+        const planoNorm = normalizeRuleText(planoVal);
+        const planoEhCodigo = /^\d+$/.test(planoNorm);
+
+        return (
+          regrasBeneficiario.find((rule) => {
+            if (rule.enabled === false) return false;
+            const criteria = rule.criteria ?? {};
+            const localTokens = criteria.localContains ?? [];
+            const planTokens = criteria.planContains ?? [];
+            const descTokens = criteria.descriptionContains ?? [];
+            const requirePlanAndDescription =
+              criteria.requirePlanAndDescription === true;
+
+            const textoCombinado = `${localVal} ${planoVal} ${descVal}`;
+
+            // local/plan/description podem variar entre bases, por isso valida no texto combinado.
+            const localOk = containsAny(textoCombinado, localTokens);
+            const planOk = containsAny(textoCombinado, planTokens);
+            const descOk = containsAny(textoCombinado, descTokens);
+            const hasPlanDescRule =
+              planTokens.length > 0 || descTokens.length > 0;
+
+            if (!hasPlanDescRule) {
+              return localOk;
+            }
+
+            if (requirePlanAndDescription) {
+              // Em algumas bases o plano chega apenas como id numerico.
+              // Nesse caso, nao bloqueia a regra quando a descricao casar.
+              const planOkResolved =
+                planOk || (planTokens.length > 0 && planoEhCodigo && descOk);
+              return localOk && planOkResolved && descOk;
+            }
+
+            return localOk && (planOk || descOk);
+          }) ?? null
+        );
+      };
+
+      const regrasAplicadas = titulosCalculados
+        .map((titulo) => detectRuleForTitulo(titulo))
+        .filter(Boolean) as BeneficiarioRule[];
+      const mesmaRegraParaTodos =
+        regrasAplicadas.length === titulosCalculados.length &&
+        regrasAplicadas.every((r) => r.id === regrasAplicadas[0]?.id);
+
+      const regraPixSelecionada = mesmaRegraParaTodos
+        ? regrasAplicadas[0]
+        : null;
+      const maxDiasPosVencimentoDigitado = parseMaxDiasPosVencimentoInput(
+        maxDiasPosVencimentoEscolhido,
+      );
+      if (
+        String(maxDiasPosVencimentoEscolhido ?? "").trim() !== "" &&
+        maxDiasPosVencimentoDigitado === null
+      ) {
+        Alert.alert(
+          "Prazo inválido",
+          "Informe apenas numero inteiro de 0 a 365 para o prazo apos vencimento.",
+        );
+        return;
+      }
+      if (maxDiasPosVencimentoDigitado !== null) {
+        maxDiasPosVencimentoAplicado = maxDiasPosVencimentoDigitado;
+      }
+      maxDiasPosVencimentoExibir = maxDiasPosVencimentoAplicado;
+
+      const dataPagamentoSemHora = parseISO(dataPagamentoYmd);
+      const dataPagamentoBase = new Date(
+        dataPagamentoSemHora.getFullYear(),
+        dataPagamentoSemHora.getMonth(),
+        dataPagamentoSemHora.getDate(),
+      );
+
+      const diasAtrasoMaiorSelecionado = titulosCalculados.reduce(
+        (maxAtraso, titulo) => {
+          const vencYmd = normalizeDueDate(
+            String(titulo?.vencimento ?? ""),
+            String(titulo?.vencF ?? ""),
+          );
+          const vencimentoSemHora = parseISO(vencYmd);
+          if (Number.isNaN(vencimentoSemHora.getTime())) return maxAtraso;
+
+          const vencimentoBase = new Date(
+            vencimentoSemHora.getFullYear(),
+            vencimentoSemHora.getMonth(),
+            vencimentoSemHora.getDate(),
+          );
+
+          const msDia = 24 * 60 * 60 * 1000;
+          const diasAtrasoTitulo = Math.max(
+            0,
+            Math.floor(
+              (dataPagamentoBase.getTime() - vencimentoBase.getTime()) / msDia,
+            ),
+          );
+
+          return Math.max(maxAtraso, diasAtrasoTitulo);
+        },
+        0,
+      );
+
+      if (diasAtrasoMaiorSelecionado > maxDiasPosVencimentoAplicado) {
+        Alert.alert(
+          "PIX vencido",
+          `Nao e possivel gerar/atualizar o boleto PIX porque o prazo maximo de ${maxDiasPosVencimentoAplicado} dia(s) apos o vencimento foi excedido (atraso atual: ${diasAtrasoMaiorSelecionado} dia(s)).`,
+        );
+        return;
+      }
+
+      const regraAplicadaId = regraPixSelecionada
+        ? String(regraPixSelecionada.id)
+        : "nenhuma";
+
+      const idBeneficiarioDefault = String(beneficiario.id ?? "default");
+      const beneficiariosPorTitulo = titulosCalculados.map((titulo) => {
+        const regra = detectRuleForTitulo(titulo);
+        return String(
+          regra?.beneficiary?.id ?? regra?.id ?? idBeneficiarioDefault,
+        );
+      });
+      const idsBeneficiariosUnicos = Array.from(
+        new Set(beneficiariosPorTitulo),
+      );
+      if (idsBeneficiariosUnicos.length > 1) {
+        Alert.alert(
+          "Selecao invalida",
+          "Os titulos selecionados pertencem a beneficiarios diferentes. Gere o boleto PIX separadamente por beneficiario.",
+        );
+        return;
+      }
+
+      const beneficiarioEfetivo: BeneficiarioCobranca = regraPixSelecionada
+        ? {
+            id: regraPixSelecionada.beneficiary.id ?? regraPixSelecionada.id,
+            nome: regraPixSelecionada.beneficiary.nome,
+            documento:
+              regraPixSelecionada.beneficiary.documento ||
+              beneficiario.documento,
+            endereco: regraPixSelecionada.beneficiary.endereco,
+            pixChave: regraPixSelecionada.beneficiary.pixChave,
+            cidade:
+              regraPixSelecionada.beneficiary.cidade || beneficiario.cidade,
+            usePsp:
+              regraPixSelecionada.beneficiary.usePsp === undefined
+                ? true
+                : regraPixSelecionada.beneficiary.usePsp,
+          }
+        : {
+            id: beneficiario.id ?? "default",
+            nome: beneficiario.nome,
+            documento: beneficiario.documento,
+            endereco: beneficiario.endereco,
+            pixChave: beneficiario.pixChave,
+            cidade: beneficiario.cidade,
+            usePsp:
+              beneficiario.usePsp === undefined ? true : beneficiario.usePsp,
+          };
+
+      const multaPercentualAplicado =
+        regraPixSelecionada?.pix?.multaPercent !== undefined
+          ? Number(regraPixSelecionada.pix.multaPercent)
+          : 2;
+      let multaPercentualExibir = multaPercentualAplicado;
+      const jurosPercentDiaAplicado =
+        regraPixSelecionada?.pix?.jurosPercentDia !== undefined
+          ? Number(regraPixSelecionada.pix.jurosPercentDia)
+          : 0.0334;
+      const jurosPercentDiaLabel = jurosPercentDiaAplicado.toLocaleString(
+        "pt-BR",
+        {
+          minimumFractionDigits: 4,
+          maximumFractionDigits: 4,
+        },
+      );
+
+      titulosCalculados = titulosCalculados.map((item) => {
+        const multaBaseRegra =
+          item.diasAtraso > 0
+            ? item.valorOriginal * (multaPercentualAplicado / 100)
+            : 0;
+        const multaRegra = multaBaseRegra + item.acrescimoTotal;
+        const totalCobrarRegra = Math.max(
+          0,
+          item.valorOriginal + multaRegra + item.juros - item.descontoTotal,
+        );
+        return {
+          ...item,
+          multa: multaRegra,
+          totalCobrar: totalCobrarRegra,
+        };
+      });
+
+      totalCobrar = titulosCalculados.reduce(
+        (acc, item) => acc + item.totalCobrar,
+        0,
+      );
+      multaExibirInicial = titulosCalculados.reduce(
+        (acc, item) => acc + item.multa,
+        0,
+      );
+      jurosExibirInicial = titulosCalculados.reduce(
+        (acc, item) => acc + item.juros,
+        0,
+      );
+      descontoExibir = titulosCalculados.reduce(
+        (acc, item) => acc + item.descontoTotal,
+        0,
+      );
+      diasAtrasoExibirInicial = Math.max(
+        0,
+        ...titulosCalculados.map((item) => item.diasAtraso),
+      );
+
+      multaExibir = multaExibirInicial;
+      jurosExibir = jurosExibirInicial;
+      diasAtrasoExibir = diasAtrasoExibirInicial;
+
       const onlyDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
+      const normalizePixKey = (
+        pixKeyRaw: string,
+        fallbackDocDigits: string,
+      ) => {
+        const raw = String(pixKeyRaw ?? "").trim();
+        const placeholder = raw.toUpperCase().includes("INFORMAR_CHAVE_PIX");
+        const key = placeholder ? "" : raw;
+
+        const uuidRe =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        let normalized = key;
+        if (
+          !normalized &&
+          (fallbackDocDigits.length === 11 || fallbackDocDigits.length === 14)
+        ) {
+          normalized = fallbackDocDigits;
+        }
+
+        if (/cpf|cnpj/i.test(normalized)) {
+          normalized = onlyDigits(normalized);
+        } else if (emailRe.test(normalized)) {
+          normalized = normalized.toLowerCase();
+        } else if (uuidRe.test(normalized)) {
+          normalized = normalized.toLowerCase();
+        } else {
+          const digits = onlyDigits(normalized);
+          if (digits.length === 11 || digits.length === 14) {
+            normalized = digits;
+          } else if (
+            /^\+?\d[\d\s().-]*$/.test(normalized) &&
+            digits.length >= 8
+          ) {
+            // Mantem telefone em formato E.164 quando houver indicacao de '+'
+            normalized = normalized.trim().startsWith("+")
+              ? `+${digits}`
+              : digits;
+          }
+        }
+
+        return normalized.trim();
+      };
+
+      const isPixKeyLikelyValid = (key: string) => {
+        const value = String(key ?? "").trim();
+        if (!value) return false;
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const uuidRe =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const cpfCnpjRe = /^\d{11}$|^\d{14}$/;
+        const phoneE164Re = /^\+[1-9]\d{7,14}$/;
+        const isValidCpf = (cpf: string) => {
+          const doc = cpf.replace(/\D/g, "");
+          if (doc.length !== 11 || /^(\d)\1{10}$/.test(doc)) return false;
+          let sum = 0;
+          for (let i = 0; i < 9; i++) sum += Number(doc[i]) * (10 - i);
+          let check = (sum * 10) % 11;
+          if (check === 10) check = 0;
+          if (check !== Number(doc[9])) return false;
+          sum = 0;
+          for (let i = 0; i < 10; i++) sum += Number(doc[i]) * (11 - i);
+          check = (sum * 10) % 11;
+          if (check === 10) check = 0;
+          return check === Number(doc[10]);
+        };
+        const isValidCnpj = (cnpj: string) => {
+          const doc = cnpj.replace(/\D/g, "");
+          if (doc.length !== 14 || /^(\d)\1{13}$/.test(doc)) return false;
+          let size = 12;
+          let numbers = doc.substring(0, size);
+          const digits = doc.substring(size);
+          let sum = 0;
+          let pos = size - 7;
+          for (let i = size; i >= 1; i--) {
+            sum += Number(numbers[size - i]) * pos--;
+            if (pos < 2) pos = 9;
+          }
+          let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+          if (result !== Number(digits[0])) return false;
+          size = 13;
+          numbers = doc.substring(0, size);
+          sum = 0;
+          pos = size - 7;
+          for (let i = size; i >= 1; i--) {
+            sum += Number(numbers[size - i]) * pos--;
+            if (pos < 2) pos = 9;
+          }
+          result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+          return result === Number(digits[1]);
+        };
+        const isValidCpfCnpj = (doc: string) => {
+          const digits = doc.replace(/\D/g, "");
+          if (digits.length === 11) return isValidCpf(digits);
+          if (digits.length === 14) return isValidCnpj(digits);
+          return false;
+        };
+        return (
+          emailRe.test(value) ||
+          uuidRe.test(value) ||
+          (cpfCnpjRe.test(value) && isValidCpfCnpj(value)) ||
+          phoneE164Re.test(value)
+        );
+      };
       const normalizeText = (s: string) =>
         String(s ?? "")
           .normalize("NFD")
@@ -1233,17 +1767,50 @@ function Receber() {
         return crc.toString(16).toUpperCase().padStart(4, "0");
       };
 
-      const documentoDigits = onlyDigits(beneficiario.documento);
-      const chavePixFinal =
-        documentoDigits.length === 14 || documentoDigits.length === 11
-          ? documentoDigits
-          : String(beneficiario.pixChave ?? "").trim();
+      const documentoDigits = onlyDigits(beneficiarioEfetivo.documento ?? "");
+      const chavePixFinal = normalizePixKey(
+        String(beneficiarioEfetivo.pixChave ?? ""),
+        documentoDigits,
+      );
 
-      const merchantName = normalizeText(beneficiario.nome || "Reforlimer")
+      if (!isPixKeyLikelyValid(chavePixFinal)) {
+        Alert.alert(
+          "Chave PIX inválida",
+          "Nao foi possivel gerar o QR Code porque a chave PIX do beneficiario esta invalida. Confira a chave em beneficiarios_config.php (CPF/CNPJ com 11 ou 14 digitos, telefone em E.164 com +55, email ou chave aleatoria UUID).",
+        );
+        return;
+      }
+
+      const maskKeepLast4Digits = (value: string) => {
+        const digits = onlyDigits(value);
+        if (!digits) return "****";
+        if (digits.length <= 4) return digits;
+        return `${"*".repeat(digits.length - 4)}${digits.slice(-4)}`;
+      };
+
+      const maskDocumentoComTipo = (value: string) => {
+        const raw = String(value ?? "").trim();
+        const digits = onlyDigits(raw);
+        const sufixo = maskKeepLast4Digits(digits);
+        if (raw.toUpperCase().includes("CPF")) return `CPF: ${sufixo}`;
+        if (raw.toUpperCase().includes("CNPJ")) return `CNPJ: ${sufixo}`;
+        return sufixo;
+      };
+
+      const documentoExibicao = maskDocumentoComTipo(
+        String(beneficiarioEfetivo.documento ?? ""),
+      );
+      const chavePixExibicao = maskKeepLast4Digits(chavePixFinal);
+
+      const merchantName = normalizeText(
+        beneficiarioEfetivo.nome || "Reforlimer",
+      )
         .toUpperCase()
         .substring(0, 25);
       // Cidade padrao da cobranca PIX
-      const merchantCity = normalizeText(beneficiario.cidade || "Limeira")
+      const merchantCity = normalizeText(
+        beneficiarioEfetivo.cidade || "Limeira",
+      )
         .toUpperCase()
         .substring(0, 15);
       const txid =
@@ -1261,53 +1828,109 @@ function Receber() {
       let qrCodeUrl = "";
       let origemCobranca = "LOCAL";
 
-      try {
-        const primeiroTitulo = titulosCalculados[0];
-        const vencimentoYmd = normalizeDueDate(
-          String(primeiroTitulo?.vencimento ?? vencIso ?? ""),
-          String(primeiroTitulo?.vencF ?? venc ?? ""),
-        );
-        const pspRes = await api.post("receber/gerar_cobranca_pix.php", {
-          idConta: idContaRef,
-          valor: totalCobrar,
-          vencimento: vencimentoYmd,
-          pagadorNome:
-            titulosCalculados.length > 1
-              ? "Pagador diversos"
-              : titulosCalculados[0]?.cliente || forn || "Consumidor Final",
-          pagadorDocumento:
-            titulosCalculados.length > 1
-              ? ""
-              : String(titulosCalculados[0]?.doc ?? doc ?? ""),
-          descricao:
-            titulosCalculados.length > 1
-              ? `Cobranca ${titulosCalculados.length} titulos`
-              : `Cobranca titulo ${idContaRef}`,
-        });
+      const usarPspNaCobranca = beneficiarioEfetivo.usePsp !== false;
 
-        const pspOk = pspRes?.data?.success === true;
-        const copiaECola = String(pspRes?.data?.pix?.copiaECola ?? "").trim();
-        const qrImg = String(pspRes?.data?.pix?.qrCodeImage ?? "").trim();
+      if (usarPspNaCobranca) {
+        try {
+          const primeiroTitulo = titulosCalculados[0];
+          const vencimentoYmd = normalizeDueDate(
+            String(primeiroTitulo?.vencimento ?? vencIso ?? ""),
+            String(primeiroTitulo?.vencF ?? venc ?? ""),
+          );
+          const pspRes = await api.post("receber/gerar_cobranca_pix.php", {
+            idConta: idContaRef,
+            // Envia o valor base e delega o calculo por atraso ao PSP (multa/juros).
+            valor: totalBaseCobranca,
+            vencimento: vencimentoYmd,
+            dataPagamento: dataPagamentoYmd,
+            multaPercent: multaPercentualAplicado,
+            jurosPercentDia: jurosPercentDiaAplicado,
+            maxDiasPosVencimento: maxDiasPosVencimentoAplicado,
+            pagadorNome:
+              titulosCalculados.length > 1
+                ? "Pagador diversos"
+                : titulosCalculados[0]?.cliente || forn || "Consumidor Final",
+            pagadorDocumento:
+              titulosCalculados.length > 1
+                ? ""
+                : String(titulosCalculados[0]?.doc ?? doc ?? ""),
+            descricao:
+              titulosCalculados.length > 1
+                ? `Cobranca ${titulosCalculados.length} titulos`
+                : `Cobranca titulo ${idContaRef}`,
+          });
 
-        if (pspOk && copiaECola) {
-          origemCobranca = "PSP";
-          brCodePix = copiaECola;
-          if (qrImg.startsWith("http") || qrImg.startsWith("data:image")) {
-            qrCodeUrl = qrImg;
-          } else if (qrImg) {
-            qrCodeUrl = `data:image/png;base64,${qrImg}`;
+          const pspOk = pspRes?.data?.success === true;
+          const copiaECola = String(pspRes?.data?.pix?.copiaECola ?? "").trim();
+          const qrImg = String(pspRes?.data?.pix?.qrCodeImage ?? "").trim();
+
+          if (pspOk && copiaECola) {
+            origemCobranca = "PSP";
+            brCodePix = copiaECola;
+            if (qrImg.startsWith("http") || qrImg.startsWith("data:image")) {
+              qrCodeUrl = qrImg;
+            } else if (qrImg) {
+              qrCodeUrl = `data:image/png;base64,${qrImg}`;
+            }
+            totalCobrar =
+              Number(pspRes?.data?.pix?.valor ?? totalCobrar) || totalCobrar;
+            multaExibir =
+              Number(pspRes?.data?.pix?.multaValor ?? multaExibir) || 0;
+            multaPercentualExibir =
+              Number(
+                pspRes?.data?.pix?.multaPercent ?? multaPercentualExibir,
+              ) || multaPercentualExibir;
+            jurosExibir =
+              Number(pspRes?.data?.pix?.jurosValor ?? jurosExibir) || 0;
+            diasAtrasoExibir =
+              Number(pspRes?.data?.pix?.diasAtraso ?? diasAtrasoExibir) || 0;
+            const maxDiasPosVencimentoRetornado = Number(
+              pspRes?.data?.pix?.maxDiasPosVencimento,
+            );
+            if (Number.isFinite(maxDiasPosVencimentoRetornado)) {
+              maxDiasPosVencimentoExibir = Math.max(
+                0,
+                Math.floor(maxDiasPosVencimentoRetornado),
+              );
+            }
+            situacaoPixExibir =
+              String(pspRes?.data?.pix?.situacao ?? "").trim() ||
+              (diasAtrasoExibir > 0 ? "Vencido" : "A vencer");
+            vencimentoPixExibir =
+              String(
+                pspRes?.data?.charge?.vencimentoF ??
+                  pspRes?.data?.charge?.vencimento ??
+                  vencimentoPixExibir,
+              ).trim() || vencimentoPixExibir;
           }
-          totalCobrar =
-            Number(pspRes?.data?.pix?.valor ?? totalCobrar) || totalCobrar;
-          multaExibir =
-            Number(pspRes?.data?.pix?.multaValor ?? multaExibir) || 0;
-          jurosExibir =
-            Number(pspRes?.data?.pix?.jurosValor ?? jurosExibir) || 0;
-          diasAtrasoExibir =
-            Number(pspRes?.data?.pix?.diasAtraso ?? diasAtrasoExibir) || 0;
+        } catch (e: any) {
+          const apiCode = String(e?.response?.data?.code ?? "").trim();
+          const apiMsg = String(e?.response?.data?.message ?? "").trim();
+          // Fallback silencioso para QR local quando o PSP falhar.
+          // Mantem o fluxo de geracao sem exibir alertas tecnicos ao usuario.
+          if (
+            apiCode === "PIX_OVERDUE_LIMIT_EXCEEDED" ||
+            (e?.response?.status === 422 &&
+              apiMsg.toLowerCase().includes("expirada"))
+          ) {
+            const diasAtrasoErro = Number(e?.response?.data?.diasAtraso);
+            const diasAtrasoMostrar = Number.isFinite(diasAtrasoErro)
+              ? Math.max(0, Math.floor(diasAtrasoErro))
+              : diasAtrasoExibir;
+            const limiteErro = Number(e?.response?.data?.maxDiasPosVencimento);
+            const limiteMostrar = Number.isFinite(limiteErro)
+              ? Math.max(0, Math.floor(limiteErro))
+              : maxDiasPosVencimentoAplicado;
+
+            Alert.alert(
+              "PIX vencido",
+              `Nao e possivel gerar/atualizar o boleto PIX porque o prazo maximo de ${limiteMostrar} dia(s) apos o vencimento foi excedido (atraso atual: ${diasAtrasoMostrar} dia(s)).`,
+            );
+            return;
+          }
         }
-      } catch (e) {
-        // segue para fallback local sem interromper o fluxo
+      } else {
+        // Regra local segue fluxo normal de geracao do QR local.
       }
 
       if (!brCodePix) {
@@ -1360,9 +1983,10 @@ function Receber() {
 
               <div class="sec">
                 <div class="ttl">Beneficiario</div>
-                <div class="txt">${beneficiario.nome}</div>
-                <div class="txt">${beneficiario.documento}</div>
-                <div class="txt">${beneficiario.endereco}</div>
+                <div class="txt">${beneficiarioEfetivo.nome}</div>
+                <div class="txt">${documentoExibicao}</div>
+                <div class="txt">${beneficiarioEfetivo.endereco}</div>
+                <div class="txt">Identificacao: ${String(beneficiarioEfetivo.id ?? "default").toUpperCase()}</div>
               </div>
 
               <div class="sec">
@@ -1384,8 +2008,8 @@ function Receber() {
                   <tr>
                     <th>Titulo</th>
                     <th>Vencimento</th>
+                    <th>Despesa</th>
                     <th class="right">Valor Base (R$)</th>
-                    <th class="right">Acrésc. (R$)</th>
                     <th class="right">Desc. (R$)</th>
                     <th class="right">Total Corrigido (R$)</th>
                   </tr>
@@ -1406,8 +2030,12 @@ function Receber() {
                             )
                           : "-"
                     }</td>
+                    <td>${
+                      String(titulo?.descricaoConta ?? "").trim() ||
+                      String(titulo?.plano ?? "").trim() ||
+                      "-"
+                    }</td>
                     <td class="right">${valorFmt(titulo.valorOriginal)}</td>
-                    <td class="right">${valorFmt(titulo.acrescimoTotal)}</td>
                     <td class="right">${valorFmt(titulo.descontoTotal)}</td>
                     <td class="right">${valorFmt(titulo.totalCobrar)}</td>
                   </tr>
@@ -1415,20 +2043,16 @@ function Receber() {
                     )
                     .join("")}
                   <tr>
-                    <td colspan="2">Multa por atraso (2%)</td>
-                    <td class="right" colspan="4">${valorFmt(multaExibir)}</td>
+                    <td colspan="3">Multa por atraso (${multaPercentualExibir}%)</td>
+                    <td class="right" colspan="3">${valorFmt(multaExibir)}</td>
                   </tr>
                   <tr>
-                    <td colspan="2">Juros por atraso (0,0334% ao dia x ${diasAtrasoExibir} dia(s))</td>
-                    <td class="right" colspan="4">${valorFmt(jurosExibir)}</td>
+                    <td colspan="3">Juros por atraso (${jurosPercentDiaLabel}% a.d. x ${diasAtrasoExibir} dia(s))</td>
+                    <td class="right" colspan="3">${valorFmt(jurosExibir)}</td>
                   </tr>
                   <tr>
-                    <td colspan="2">Acréscimo total aplicado</td>
-                    <td class="right" colspan="4">${valorFmt(acrescimoExibir)}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="2">Desconto total aplicado</td>
-                    <td class="right" colspan="4">${valorFmt(descontoExibir)}</td>
+                    <td colspan="3">Desconto total aplicado</td>
+                    <td class="right" colspan="3">${valorFmt(descontoExibir)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -1436,10 +2060,23 @@ function Receber() {
               <div class="total">Total para pagamento: R$ ${valorFmt(totalCobrar)}</div>
 
               <div class="sub">Origem da cobranca PIX: ${origemCobranca}</div>
+              ${
+                origemCobranca.startsWith("LOCAL-")
+                  ? `<div class="sub" style="color:#065f46; font-weight:bold;">Cobranca direcionada para ${beneficiarioEfetivo.nome}.</div>`
+                  : ""
+              }
 
               <div class="pix">
                 <div class="ttl">Pagamento via PIX</div>
-                <div class="txt">Chave PIX: ${chavePixFinal}</div>
+                <div class="txt">Vencimento do PIX: ${vencimentoPixExibir}</div>
+                <div class="txt">Situacao do PIX: ${situacaoPixExibir}</div>
+                <div class="txt">Apos o vencimento, o pagamento segue regra de multa e juros do boleto.</div>
+                <div class="txt">${
+                  origemCobranca === "PSP"
+                    ? `No modo PSP, o banco aplica automaticamente os encargos ate ${maxDiasPosVencimentoExibir} dia(s) apos o vencimento.`
+                    : "No modo local (beneficiario alternativo), o valor do QR e calculado nesta emissao conforme a data de pagamento informada."
+                }</div>
+                <div class="txt">Data considerada para juros: ${format(parseISO(dataPagamentoYmd), "dd/MM/yyyy")}</div>
                 <div class="txt">Cidade recebedor: ${merchantCity}</div>
                 <div class="txt">TXID: ${txid}</div>
                 <div class="txt" style="word-break: break-all;">Copia e cola: ${brCodePix}</div>
@@ -1493,7 +2130,13 @@ function Receber() {
     valor,
     doc,
     tel,
+    dataPagamentoPix,
+    maxDiasPosVencimentoEscolhido,
     beneficiario,
+    regrasBeneficiario,
+    pdfDiagnostics,
+    normalizeDateForPix,
+    parseMaxDiasPosVencimentoInput,
     calcularValorTituloCorrigido,
     limparSelecaoMultipla,
   ]);
@@ -2145,116 +2788,294 @@ function Receber() {
         transparent={true}
         onRequestClose={() => setAbrirModal(!abrirModal)}
       >
-        <View style={styles.centralizarModal}>
-          <View style={styles.CardContainerModal}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.centralizarModal}>
             <TouchableOpacity
-              style={styles.removeItem}
+              style={styles.modalCloseFloating}
               onPress={() => setAbrirModal(false)}
+              hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
             >
-              <EvilIcons name="close" size={25} color="black" />
+              <Ionicons name="close" size={22} color="#111827" />
             </TouchableOpacity>
-            <Text style={styles.Cliente}>{forn}</Text>
-            <Text style={styles.Valor}>R$ {valor}</Text>
-
-            <View style={styles.Section}>
-              <MaterialIcons
-                style={styles.Icon}
-                name="attach-money"
-                size={22}
-                color="#c1c1c1"
-              />
-              <Text style={styles.Entrada}>{saida}</Text>
-              <Text style={styles.Vencimento}>Vencimento: {venc}</Text>
-
-              {tel ? (
-                <TouchableOpacity
-                  style={styles.Vencimento2}
-                  onPress={async () => {
-                    const numeroLimpo = tel.replace(/\D/g, "");
-                    const mensagem = `Olá, ${forn}. Lembrete de cobrança referente ao título número ${idConta}, com vencimento em ${venc}, no valor de R$ ${valor}. Caso já tenha sido liquidado, favor desconsiderar este aviso.`;
-                    await Linking.openURL(
-                      `http://api.whatsapp.com/send?1=pt_BR&phone=55${numeroLimpo}&text=${encodeURIComponent(
-                        mensagem,
-                      )}`,
-                    );
-                  }}
-                >
-                  <Image
-                    style={{ width: 30, height: 30 }}
-                    source={require("../../assets/whats.png")}
-                  />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            <View style={styles.Section}>
-              <MaterialIcons
-                style={styles.Icon}
-                name="money"
-                size={22}
-                color="#c1c1c1"
-              />
-              <Text style={styles.Entrada}>{doc}</Text>
-              <Text style={styles.Vencimento}>{plano}</Text>
-            </View>
-
-            <View style={styles.Section}>
-              <MaterialIcons
-                style={styles.Icon}
-                name="date-range"
-                size={22}
-                color="#c1c1c1"
-              />
-              <Text style={styles.Entrada}>Emissão {emissao}</Text>
-              <Text style={styles.Vencimento}>{usu}</Text>
-            </View>
-
-            <View style={styles.Footer}>
-              <Text style={styles.FooterText}>
-                Frequência: <Text style={{ color: "gray" }}>{freq}</Text>
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => Linking.openURL(urlImgContas + "contas/" + arq)}
+            <KeyboardAvoidingView
+              style={{ width: "100%", alignItems: "center" }}
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              {tumb && tumb !== "sem-foto.jpg" ? (
-                tumb == "pdf.png" ? (
-                  <View style={styles.viewImg}>
-                    <Image
-                      style={styles.ImagemModal}
-                      source={require("../../assets/pdf.png")}
-                    />
-                    <Text style={styles.textoAbrir}>(Clique para Abrir)</Text>
-                  </View>
-                ) : tumb == "rar.png" ? (
-                  <View style={styles.viewImg}>
-                    <Image
-                      style={styles.ImagemModal}
-                      source={require("../../assets/rar.png")}
-                    />
-                    <Text style={styles.textoAbrir}>(Clique para Abrir)</Text>
-                  </View>
-                ) : (
-                  <View style={styles.viewImg}>
-                    <Image
-                      style={styles.ImagemModal}
-                      source={{ uri: urlImgContas + "contas/" + tumb }}
-                    />
-                    <Text style={styles.textoAbrir}>(Clique para Abrir)</Text>
-                  </View>
-                )
-              ) : null}
-            </TouchableOpacity>
+              <ScrollView
+                contentContainerStyle={{ width: "100%", alignItems: "center" }}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.CardContainerModal}>
+                  <TouchableOpacity
+                    style={styles.removeItem}
+                    onPress={() => setAbrirModal(false)}
+                  >
+                    <EvilIcons name="close" size={25} color="black" />
+                  </TouchableOpacity>
+                  <Text style={styles.Cliente}>{forn}</Text>
+                  <Text style={styles.Valor}>R$ {valor}</Text>
 
-            <TouchableOpacity
-              style={[styles.Button, { marginTop: 10, width: "90%" }]}
-              onPress={gerarBoletoPixCobrancaPDF}
-            >
-              <Text style={styles.ButtonText}>Gerar Boleto PIX (PDF)</Text>
-            </TouchableOpacity>
+                  <View style={styles.Section}>
+                    <MaterialIcons
+                      style={styles.Icon}
+                      name="attach-money"
+                      size={22}
+                      color="#c1c1c1"
+                    />
+                    <Text style={[styles.Entrada, { flex: 1 }]}>{saida}</Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.text,
+                        fontSize: 14,
+                        color: "gray",
+                        marginRight: 8,
+                      }}
+                    >
+                      Vencimento: {venc}
+                    </Text>
+
+                    {tel ? (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          const numeroLimpo = tel.replace(/\D/g, "");
+                          const mensagem = `Olá, ${forn}. Lembrete de cobrança referente ao título número ${idConta}, com vencimento em ${venc}, no valor de R$ ${valor}. Caso já tenha sido liquidado, favor desconsiderar este aviso.`;
+                          await Linking.openURL(
+                            `http://api.whatsapp.com/send?1=pt_BR&phone=55${numeroLimpo}&text=${encodeURIComponent(
+                              mensagem,
+                            )}`,
+                          );
+                        }}
+                        style={{ padding: 2 }}
+                      >
+                        <Image
+                          style={{ width: 24, height: 24 }}
+                          source={require("../../assets/whats.png")}
+                        />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.Section}>
+                    <MaterialIcons
+                      style={styles.Icon}
+                      name="money"
+                      size={22}
+                      color="#c1c1c1"
+                    />
+                    <Text style={[styles.Entrada, { flex: 1 }]}>{doc}</Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.text,
+                        fontSize: 14,
+                        color: "gray",
+                      }}
+                    >
+                      {plano}
+                    </Text>
+                  </View>
+
+                  <View style={styles.Section}>
+                    <MaterialIcons
+                      style={styles.Icon}
+                      name="date-range"
+                      size={22}
+                      color="#c1c1c1"
+                    />
+                    <Text style={[styles.Entrada, { flex: 1 }]}>
+                      Emissão {emissao}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: fonts.text,
+                        fontSize: 14,
+                        color: "gray",
+                      }}
+                    >
+                      {usu}
+                    </Text>
+                  </View>
+
+                  <View style={styles.Footer}>
+                    <Text style={styles.FooterText}>
+                      Frequência: <Text style={{ color: "gray" }}>{freq}</Text>
+                    </Text>
+                  </View>
+
+                  <View>
+                    <Text style={styles.TitleInputs}>Data pagamento PIX</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.TextInput,
+                        {
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        },
+                      ]}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        const base =
+                          parseDateFlexible(dataPagamentoPix) || new Date();
+                        setDatePagamentoPix(base);
+                        setShowDataPagamentoPix(true);
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: fonts.text,
+                          fontSize: 16,
+                          color: "#333",
+                        }}
+                      >
+                        {dataPagamentoPix}
+                      </Text>
+                      <MaterialIcons
+                        name="calendar-month"
+                        size={20}
+                        color="#6b7280"
+                      />
+                    </TouchableOpacity>
+
+                    {showDataPagamentoPix && Platform.OS === "ios" ? (
+                      <View
+                        style={{
+                          backgroundColor: "#fff",
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "#e5e7eb",
+                          marginTop: 8,
+                          paddingVertical: 8,
+                          width: "95%",
+                          alignSelf: "center",
+                        }}
+                      >
+                        <DateTimePicker
+                          testID="dateTimePickerPix"
+                          value={datePagamentoPix}
+                          mode="date"
+                          display="inline"
+                          onChange={onChangeDataPagamentoPix}
+                          locale="pt-BR"
+                          themeVariant="light"
+                          style={{ width: "100%" }}
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowDataPagamentoPix(false)}
+                          style={{
+                            alignSelf: "flex-end",
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: fonts.text,
+                              fontSize: 14,
+                              color: "#4CAF50",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Fechar
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+
+                    {showDataPagamentoPix && Platform.OS !== "ios" ? (
+                      <DateTimePicker
+                        testID="dateTimePickerPix"
+                        value={datePagamentoPix}
+                        mode="date"
+                        is24Hour={true}
+                        display="calendar"
+                        onChange={onChangeDataPagamentoPix}
+                      />
+                    ) : null}
+
+                    <Text style={[styles.TitleInputs, { marginTop: 10 }]}>
+                      Prazo apos vencimento (dias)
+                    </Text>
+                    <TextInput
+                      style={styles.TextInput}
+                      value={maxDiasPosVencimentoEscolhido}
+                      onChangeText={(text) =>
+                        setMaxDiasPosVencimentoEscolhido(
+                          String(text ?? "").replace(/[^\d]/g, ""),
+                        )
+                      }
+                      placeholder="Ex.: 30 (vazio = so ate o vencimento)"
+                      keyboardType="number-pad"
+                      maxLength={3}
+                    />
+                    <Text
+                      style={{
+                        marginTop: 6,
+                        fontFamily: fonts.complement,
+                        fontSize: 12,
+                        color: "#6b7280",
+                      }}
+                    >
+                      Criterio: vazio ou 0 = so ate o vencimento; 1 = ate 1 dia
+                      apos; 2 = ate 2 dias apos.
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() =>
+                      Linking.openURL(urlImgContas + "contas/" + arq)
+                    }
+                  >
+                    {tumb && tumb !== "sem-foto.jpg" ? (
+                      tumb == "pdf.png" ? (
+                        <View style={styles.viewImg}>
+                          <Image
+                            style={styles.ImagemModal}
+                            source={require("../../assets/pdf.png")}
+                          />
+                          <Text style={styles.textoAbrir}>
+                            (Clique para Abrir)
+                          </Text>
+                        </View>
+                      ) : tumb == "rar.png" ? (
+                        <View style={styles.viewImg}>
+                          <Image
+                            style={styles.ImagemModal}
+                            source={require("../../assets/rar.png")}
+                          />
+                          <Text style={styles.textoAbrir}>
+                            (Clique para Abrir)
+                          </Text>
+                        </View>
+                      ) : (
+                        <View style={styles.viewImg}>
+                          <Image
+                            style={styles.ImagemModal}
+                            source={{ uri: urlImgContas + "contas/" + tumb }}
+                          />
+                          <Text style={styles.textoAbrir}>
+                            (Clique para Abrir)
+                          </Text>
+                        </View>
+                      )
+                    ) : null}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.Button, { marginTop: 10, width: "90%" }]}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      gerarBoletoPixCobrancaPDF();
+                    }}
+                  >
+                    <Text style={styles.ButtonText}>
+                      Gerar/Atualizar Boleto PIX
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal

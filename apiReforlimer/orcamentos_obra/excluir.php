@@ -10,9 +10,9 @@ try {
     }
 
     $pdo->beginTransaction();
-    $pdo->prepare("DELETE FROM orcamento_obra_materiais WHERE orcamento_obra_id = ?")->execute([$id]);
-    $pdo->prepare("DELETE FROM orcamento_obra_servicos WHERE orcamento_obra_id = ?")->execute([$id]);
-    $pdo->prepare("DELETE FROM orcamento_obra WHERE id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM orcamentos_obra_materiais WHERE orcamento_obra_id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM orcamentos_obra_servicos WHERE orcamento_obra_id = ?")->execute([$id]);
+    $pdo->prepare("DELETE FROM orcamentos_obra WHERE id = ?")->execute([$id]);
     $pdo->commit();
 
     echo json_encode(['success' => true, 'mensagem' => 'Orçamento de obra excluído']);
@@ -23,6 +23,4 @@ try {
     http_response_code(500);
     echo json_encode(['success' => false, 'erro' => $e->getMessage()]);
 }
-
 ?>
-

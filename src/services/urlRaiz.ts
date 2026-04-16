@@ -1,2 +1,4 @@
-const urlRaiz =   'http://192.168.1.113:8080/apiReforlimer/'
+import { API_ROOT_WITH_SLASH } from "./apiConfig";
+
+const urlRaiz = API_ROOT_WITH_SLASH;
 export default urlRaiz;

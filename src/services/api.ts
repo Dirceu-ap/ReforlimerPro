@@ -1,8 +1,8 @@
 import axios from "axios";
+import { API_ROOT } from "./apiConfig";
 
 export default axios.create({
-  // Ajuste o IP se precisar; a porta 8080 é a do XAMPP
-  baseURL: "http://192.168.1.113:8080/apiReforlimer", // pasta real da API PHP
+  baseURL: API_ROOT,
   timeout: 15000,
 });
 

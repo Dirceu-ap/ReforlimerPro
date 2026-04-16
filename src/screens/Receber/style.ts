@@ -198,6 +198,24 @@ export const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.37)',
     },
 
+    modalCloseFloating: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 52 : 24,
+        right: 18,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 30,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+    },
+
     removeItem:{
     justifyContent: "flex-end",
     alignItems: "flex-end",

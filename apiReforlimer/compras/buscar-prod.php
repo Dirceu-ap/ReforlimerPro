@@ -6,9 +6,7 @@ $postjson = json_decode(file_get_contents('php://input'), true);
 
 $buscar = '%' .@$_GET['buscar']. '%';
 
-// Busca por nome ou código, retornando apenas produtos ativos com estoque,
-// ordenados alfabeticamente pelo nome
-$query = $pdo->prepare("SELECT * FROM produtos WHERE (nome LIKE '$buscar' OR codigo LIKE '$buscar') AND ativo = 'Sim' AND estoque > 0 ORDER BY nome ASC");
+$query = $pdo->prepare("SELECT * from produtos where (nome LIKE '$buscar' or codigo LIKE '$buscar') and ativo = 'Sim' and estoque > 0 order by id desc");
 
 $query->execute();
 

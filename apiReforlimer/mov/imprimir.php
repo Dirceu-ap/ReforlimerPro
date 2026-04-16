@@ -36,7 +36,7 @@ foreach ($movimentacoes as $mov) {
     }
 }
 
-// Gera o HTML para o PDF (extrato de movimentações)
+// Gera o HTML para o PDF
 $html = '
 <!DOCTYPE html>
 <html>
@@ -44,14 +44,14 @@ $html = '
     <meta charset="utf-8">
     <title>Relatório de Movimentações</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size:10px; line-height:1.25; }
-        .header { text-align: center; margin-bottom: 8px; }
-        .titulo { font-size: 14px; font-weight: bold; }
-        .periodo { font-size: 10px; margin: 4px 0; }
-        table { width: 100%; border-collapse: collapse; font-size:9px; }
-        th, td { border: 1px solid #ddd; padding: 3px 4px; text-align: left; }
+        body { font-family: Arial, sans-serif; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .titulo { font-size: 20px; font-weight: bold; }
+        .periodo { font-size: 14px; margin: 10px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f5f5f5; }
-        .total { margin-top: 8px; text-align: right; font-weight: bold; font-size:10px; }
+        .total { margin-top: 20px; text-align: right; font-weight: bold; }
         .entrada { color: green; }
         .saida { color: red; }
     </style>
@@ -61,7 +61,7 @@ $html = '
         <div class="titulo">Relatório de Movimentações - ' . $lancamento . '</div>
         <div class="periodo">Período: ' . date('d/m/Y', strtotime($data_inicial)) . ' até ' . date('d/m/Y', strtotime($data_final)) . '</div>
     </div>
-	
+    
     <table>
         <thead>
             <tr>
@@ -77,15 +77,15 @@ $html = '
 foreach ($movimentacoes as $mov) {
     $valor_class = $mov['tipo'] == 'Entrada' ? 'entrada' : 'saida';
     $valor = number_format(floatval($mov['valor']), 2, ',', '.');
-	
+    
     $html .= '
-            <tr>
-                <td>' . date('d/m/Y', strtotime($mov['data'])) . '</td>
-                <td>' . $mov['tipo'] . '</td>
-                <td>' . $mov['descricao'] . '</td>
-                <td>' . $mov['pessoa'] . '</td>
-                <td class="' . $valor_class . '">R$ ' . $valor . '</td>
-            </tr>';
+        <tr>
+            <td>' . date('d/m/Y', strtotime($mov['data'])) . '</td>
+            <td>' . $mov['tipo'] . '</td>
+            <td>' . $mov['descricao'] . '</td>
+            <td>' . $mov['pessoa'] . '</td>
+            <td class="' . $valor_class . '">R$ ' . $valor . '</td>
+        </tr>';
 }
 
 $total_formatado = number_format(abs($total), 2, ',', '.');
@@ -94,7 +94,7 @@ $total_class = $total >= 0 ? 'entrada' : 'saida';
 $html .= '
         </tbody>
     </table>
-	
+    
     <div class="total">
         Total: <span class="' . $total_class . '">R$ ' . $total_formatado . '</span>
     </div>

@@ -20,15 +20,11 @@ try {
         exit;
     }
 
-        // serviços do orçamento (inclui unidade_base e produtividade: se houver específica no orçamento, usa ela; senão, a do serviço base)
-        $stmtSrv = $pdo->prepare("SELECT
-                                                                os.*,
-                                                                s.nome AS servico_nome,
-                                                                s.unidade_base,
-                                                                COALESCE(os.produtividade_horas_unidade, s.produtividade_horas_unidade) AS produtividade_horas_unidade
-                                                            FROM orcamentos_obra_servicos os
-                                                            LEFT JOIN servicos_obra s ON os.servico_id = s.id
-                                                            WHERE os.orcamento_obra_id = ?");
+    // serviços do orçamento
+    $stmtSrv = $pdo->prepare("SELECT os.*, s.nome AS servico_nome, s.unidade_base
+                              FROM orcamentos_obra_servicos os
+                              LEFT JOIN servicos_obra s ON os.servico_id = s.id
+                              WHERE os.orcamento_obra_id = ?");
     $stmtSrv->execute([$id]);
     $servicos = $stmtSrv->fetchAll(PDO::FETCH_ASSOC);
 

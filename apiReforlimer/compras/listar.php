@@ -31,7 +31,6 @@ for ($i=  0; $i < count($res); $i++) {
         $cp4 = $res[$i]['lancamento'];
         $cp5 = $res[$i]['data_lanc'];
         $cp6 = $res[$i]['data_pgto'];
-       $cpLocal = isset($res[$i]['local']) ? $res[$i]['local'] : '';
        
         $cp10 = $res[$i]['parcelas'];
         $cp11 = $res[$i]['status'];
@@ -81,7 +80,6 @@ for ($i=  0; $i < count($res); $i++) {
         'parcelas' => $cp10,
         'status' => $cp11,
         'cliente' => $nome_cliente,
-        'local' => $cpLocal,
         'cor' => $classe,
     );
 }
