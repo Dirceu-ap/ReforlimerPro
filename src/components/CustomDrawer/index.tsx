@@ -232,6 +232,25 @@ const CustomDrawer: React.FC = () => {
           <TouchableOpacity
             style={styles.Pages}
             onPress={() => {
+              navigation.navigate("ConsultaMovFornecedor");
+              navigation.dispatch(DrawerActions.closeDrawer());
+            }}
+          >
+            <MaterialIcons
+              style={styles.iconRegistered}
+              name="swap-vert"
+              size={30}
+              color="gray"
+            />
+
+            <Text style={styles.PagesText}>Mov. por Fornecedor</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View>
+          <TouchableOpacity
+            style={styles.Pages}
+            onPress={() => {
               navigation.navigate("Categorias");
               navigation.dispatch(DrawerActions.closeDrawer());
             }}

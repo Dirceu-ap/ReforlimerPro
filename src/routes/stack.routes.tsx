@@ -43,6 +43,7 @@ import ServicosObra from "../screens/ServicosObra";
 import NovoOrcamentoObra from "../screens/NovoOrcamentoObra/NovoOrcamentoObraScreen";
 import LancamentosCustos from "../screens/LancamentosCustos";
 import NotaFiscal from "../screens/NotaFiscal";
+import ConsultaMovFornecedor from "../screens/ConsultaMovFornecedor";
 
 const Stack = createNativeStackNavigator();
 
@@ -93,6 +94,7 @@ function StackNavigator() {
       <Stack.Screen name="Colaboradores" component={Colaboradores} />
       <Stack.Screen name="NovoColaborador" component={NovoColaborador} />
       <Stack.Screen name="Splash" component={Splash} />
+      <Stack.Screen name="ConsultaMovFornecedor" component={ConsultaMovFornecedor} />
     </Stack.Navigator>
   );
 }
