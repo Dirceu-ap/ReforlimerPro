@@ -9,10 +9,9 @@ $postjson = json_decode(file_get_contents('php://input'), true);
 
 $quantidade = 13;
 
-//$pagina = @$_GET['pagina'] * $quantidade;
 
-$data = @$_GET['data'];
-$data1 = @$_GET['data1'];
+$data = $_GET['data'] ?? '';
+$data1 = $_GET['data1'] ?? '';
 $statusMode = strtolower(trim((string)($_GET['status'] ?? 'pendente')));
 // termo opcional de busca (cliente/descricao/local/entrada)
 $busca = '';
@@ -25,24 +24,61 @@ if (isset($_GET['cliente'])) {
 }
 $buscaLower = strtolower($busca);
 
-// Se não for informado período, retorna todos os títulos pendentes
+// Query otimizada: evita N+1 com join de clientes e agregação de resíduos.
+$whereParts = array();
+$params = array();
+
 if (!empty($data) && !empty($data1)) {
-    if ($statusMode === 'all' || $statusMode === 'todos') {
-        $query = $pdo->prepare("SELECT * FROM contas_receber WHERE (vencimento BETWEEN '$data' and '$data1') order by vencimento asc, id asc ");
-    } else {
-        $query = $pdo->prepare("SELECT * FROM contas_receber WHERE (vencimento BETWEEN '$data' and '$data1') and status = 'Pendente' order by vencimento asc, id asc ");
-    }
-} else {
-    // Modo "todos pendentes": usa comparação case-insensitive para evitar
-    // problemas com variações de texto (ex: 'pendente', 'Pendente ', etc.)
-    if ($statusMode === 'all' || $statusMode === 'todos') {
-        $query = $pdo->prepare("SELECT * FROM contas_receber order by vencimento asc, id asc ");
-    } else {
-        $query = $pdo->prepare("SELECT * FROM contas_receber WHERE UPPER(status) LIKE 'PENDENTE%' order by vencimento asc, id asc ");
-    }
+    $whereParts[] = "(
+        DATE(cr.vencimento) BETWEEN :dataIni1 AND :dataFim1
+        OR DATE(COALESCE(cr.data_baixa, cr.vencimento)) BETWEEN :dataIni2 AND :dataFim2
+        OR EXISTS (
+            SELECT 1
+            FROM valor_parcial vp2
+            WHERE vp2.id_conta = cr.id
+              AND UPPER(TRIM(COALESCE(vp2.tipo, ''))) LIKE 'RECEBER%'
+              AND DATE(vp2.data) BETWEEN :dataIni3 AND :dataFim3
+        )
+    )";
+    $params[':dataIni1'] = $data;
+    $params[':dataFim1'] = $data1;
+    $params[':dataIni2'] = $data;
+    $params[':dataFim2'] = $data1;
+    $params[':dataIni3'] = $data;
+    $params[':dataFim3'] = $data1;
 }
 
-$query->execute();
+if (!($statusMode === 'all' || $statusMode === 'todos')) {
+    $whereParts[] = "UPPER(cr.status) LIKE 'PENDENTE%'";
+}
+
+$sql = "
+    SELECT
+        cr.*,
+        c.nome AS cliente_nome,
+        COALESCE(vp.total_resid, 0) AS total_resid,
+        COALESCE(vp.qtd_resid, 0) AS qtd_resid
+    FROM contas_receber cr
+    LEFT JOIN clientes c ON c.id = cr.cliente
+    LEFT JOIN (
+        SELECT
+            id_conta,
+            SUM(valor) AS total_resid,
+            COUNT(*) AS qtd_resid
+        FROM valor_parcial
+        WHERE UPPER(TRIM(COALESCE(tipo, ''))) LIKE 'RECEBER%'
+        GROUP BY id_conta
+    ) vp ON vp.id_conta = cr.id
+";
+
+if (count($whereParts) > 0) {
+    $sql .= " WHERE " . implode(' AND ', $whereParts);
+}
+
+$sql .= " ORDER BY cr.vencimento ASC, cr.id ASC ";
+
+$query = $pdo->prepare($sql);
+$query->execute($params);
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
 $dados = array();
@@ -51,15 +87,10 @@ for ($i=  0; $i < count($res); $i++) {
     foreach ($res[$i] as $key => $value) {
     }
 
-    $fornecedor = $res[$i]['cliente'];
-
-    $query1 = $pdo->query("SELECT * from clientes where id = '$fornecedor' ");
-    $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-    if(@count($res1) > 0){
-         @$fornecedor_nome = $res1[0]['nome'];
-     }else{
-         @$fornecedor_nome = $res[$i]['descricao'];
-     }
+    $fornecedor_nome = trim((string)($res[$i]['cliente_nome'] ?? ''));
+    if($fornecedor_nome === ''){
+        $fornecedor_nome = $res[$i]['descricao'];
+    }
 
      $arquivo = $res[$i]['arquivo'];
      //EXTRAIR EXTENSÃO DO ARQUIVO
@@ -73,24 +104,14 @@ for ($i=  0; $i < count($res); $i++) {
     }
 
 
-        //PEGAR RESIDUOS DA CONTA
-    $total_resid = 0;
+    // Usamos agregado de resíduos já retornado no SELECT principal.
+    $total_resid = (float)($res[$i]['total_resid'] ?? 0);
+    $qtd_resid = (int)($res[$i]['qtd_resid'] ?? 0);
     $valor_com_residuos = 0;
-    $id = $res[$i]['id'];
-    $valor_conta = $res[$i]['valor'];
-    $query2 = $pdo->query("SELECT * FROM valor_parcial WHERE id_conta = '$id'");
-    $res2 = $query2->fetchAll(PDO::FETCH_ASSOC);
-    if(@count($res2) > 0){
+    $valor_conta = (float)($res[$i]['valor'] ?? 0);
+    if($qtd_resid > 0){
 
         $fornecedor_nome = '(Resíduo) - ' .$fornecedor_nome;
-
-        for($i2=0; $i2 < @count($res2); $i2++){
-            foreach ($res2[$i2] as $key => $value){} 
-                $id_res = $res2[$i2]['id'];
-            $valor_resid = $res2[$i2]['valor'];
-            $total_resid += $valor_resid;
-        }
-
 
         $valor_com_residuos = $valor_conta + $total_resid;
     }

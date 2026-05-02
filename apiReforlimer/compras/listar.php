@@ -9,21 +9,25 @@ $postjson = json_decode(file_get_contents('php://input'), true);
 
 $quantidade = 13;
 
-//$pagina = @$_GET['pagina'] * $quantidade;
 
-$data = @$_GET['data'];
-$data1 = @$_GET['data1'];
+$data = $_GET['data'] ?? '';
+$data1 = $_GET['data1'] ?? '';
 
-$query = $pdo->prepare("SELECT * FROM compras WHERE (data_lanc BETWEEN '$data' and '$data1') order by data_lanc asc, id asc ");
+$query = $pdo->prepare("SELECT c.*, COALESCE(f.nome, 'Sem Fornecedor') AS nome_cliente, u.nome AS nome_usuario
+                        FROM compras c
+                        LEFT JOIN fornecedores f ON f.id = c.cliente
+                        LEFT JOIN usuarios u ON u.id = c.usuario
+                        WHERE c.data_lanc BETWEEN :dataIni AND :dataFim
+                        ORDER BY c.data_lanc ASC, c.id ASC");
 
-$query->execute();
+$query->execute([
+    ':dataIni' => $data,
+    ':dataFim' => $data1,
+]);
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
 
 for ($i=  0; $i < count($res); $i++) { 
-    foreach ($res[$i] as $key => $value) {
-    }
-
    $id = $res[$i]['id'];
         $cp1 = $res[$i]['valor'];
         $cp2 = $res[$i]['usuario'];
@@ -40,19 +44,8 @@ for ($i=  0; $i < count($res); $i++) {
             $cp6 = implode('/', array_reverse(explode('-', $cp6)));
             $cp5 = implode('/', array_reverse(explode('-', $cp5)));
 
-            $query1 = $pdo->query("SELECT * from fornecedores where id = '$cp12' ");
-        $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-        if(@count($res1) > 0){
-            $nome_cliente = $res1[0]['nome'];
-                        
-        }else{
-            $nome_cliente = 'Sem Fornecedor';
-        }
-
-
-        $query1 = $pdo->query("SELECT * from usuarios where id = '$cp2' ");
-        $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-        $nome_usuario = $res1[0]['nome'];
+        $nome_cliente = $res[$i]['nome_cliente'];
+        $nome_usuario = $res[$i]['nome_usuario'];
 
         if($cp11 == 'Concluída'){
             $classe = '#046b33';
@@ -85,7 +78,7 @@ for ($i=  0; $i < count($res); $i++) {
 }
 
 if(count($res) > 0){
-    $result = json_encode(array('success'=>true, 'resultado'=>@$dados));
+    $result = json_encode(array('success'=>true, 'resultado'=>$dados));
 }else{
     $result = json_encode(array('success'=>false, 'resultado'=>'0'));
 }

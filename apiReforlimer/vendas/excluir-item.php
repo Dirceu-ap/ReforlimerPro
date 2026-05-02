@@ -4,7 +4,7 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$id = @$_GET['id'];
+$id = $_GET['id'] ?? '';
 
 $query = $pdo->query("SELECT * from itens_venda where id = '$id' ");
 $res = $query->fetchAll(PDO::FETCH_ASSOC);

@@ -4,7 +4,7 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$buscar = '%' .@$_GET['buscar']. '%';
+$buscar = '%' . ($_GET['buscar'] ?? '') . '%';
 
 $query = $pdo->prepare("SELECT * from produtos where (nome LIKE '$buscar' or codigo LIKE '$buscar') and ativo = 'Sim' and estoque > 0 order by id desc");
 

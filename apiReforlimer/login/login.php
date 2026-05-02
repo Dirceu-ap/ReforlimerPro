@@ -4,14 +4,17 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents("php://input"), true);
 
-$query_buscar = $pdo->query("SELECT * from usuarios where email = '$postjson[email]' and senha = '$postjson[senha]' ");
+$email = trim((string)($postjson['email'] ?? ''));
+$senha = trim((string)($postjson['senha'] ?? ''));
 
-$dados_buscar = $query_buscar->fetchAll(PDO::FETCH_ASSOC);
+$stmt = $pdo->prepare("SELECT id, nome, email FROM usuarios WHERE email = :email AND senha = :senha LIMIT 1");
+$stmt->bindValue(':email', $email, PDO::PARAM_STR);
+$stmt->bindValue(':senha', $senha, PDO::PARAM_STR);
+$stmt->execute();
+
+$dados_buscar = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 for ($i=0; $i < count($dados_buscar); $i++) { 
-    foreach ($dados_buscar[$i] as $key => $value) {
-    }
-
     $dados[] = array(
         'id' => intVal($dados_buscar[$i]['id']),
         'nome' => $dados_buscar[$i]['nome'],  

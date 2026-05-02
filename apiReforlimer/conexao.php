@@ -30,6 +30,14 @@ if ($passwordEnvRaw !== false && $passwordEnvRaw !== '') {
 $pdo = null;
 $lastError = null;
 
+$pdoOptions = [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES => false,
+    PDO::ATTR_PERSISTENT => true,
+    PDO::ATTR_TIMEOUT => 5,
+];
+
 foreach ($passwordCandidates as $password) {
     foreach ($portCandidates as $port) {
         try {
@@ -37,12 +45,12 @@ foreach ($passwordCandidates as $password) {
                 "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4",
                 $username,
                 $password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]
+                $pdoOptions
             );
+
+            // Ajustes de sessao para reduzir latencia em consultas de leitura.
+            $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $pdo->exec("SET SESSION sql_mode = REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', '')");
             break 2;
         } catch (PDOException $e) {
             $lastError = $e;

@@ -27,6 +27,21 @@ if ($dataFim !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataFim)) {
 }
 
 try {
+    $stmtCols = $pdo->query("SHOW COLUMNS FROM livro_ponto");
+    $colsRaw = $stmtCols->fetchAll(PDO::FETCH_ASSOC);
+    $temStatus = false;
+
+    foreach ($colsRaw as $col) {
+        if (!empty($col['Field']) && $col['Field'] === 'status') {
+            $temStatus = true;
+            break;
+        }
+    }
+
+    $selectStatus = $temStatus
+        ? "COALESCE(NULLIF(TRIM(lp.status), ''), 'Pendente') AS status"
+        : "'Pendente' AS status";
+
     // ATENÇÃO: garanta que a tabela livro_ponto tenha estas colunas:
     // id, colaborador_id, data, entrada, saida, total_horas,
     // almoco_saida, almoco_retorno, observacao, local
@@ -41,6 +56,7 @@ try {
                 lp.almoco_retorno,
                 lp.observacao,
                 lp.local AS local,
+                $selectStatus,
                 lp.colaborador_id AS colaborador_id,
                 c.nome AS colaborador_nome
             FROM livro_ponto lp

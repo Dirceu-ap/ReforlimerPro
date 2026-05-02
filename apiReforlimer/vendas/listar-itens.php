@@ -4,7 +4,7 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$id_usuario = @$_GET['user'];
+$id_usuario = isset($_GET['user']) ? trim((string)$_GET['user']) : '';
 $data_atual = date('Y-m-d');
 
 
@@ -12,15 +12,18 @@ $query = $pdo->query("DELETE FROM contas_receber where id_venda = '-1' and usuar
 
 $total_venda = 0;
 $total_vendaF = 0;
-$query_con = $pdo->query("SELECT * FROM itens_venda WHERE id_venda = 0 and usuario = '$id_usuario' order by id desc");
+$query_con = $pdo->query("SELECT iv.*, p.nome AS nome_produto, p.foto AS foto_produto, p.estoque AS estoque_produto
+						  FROM itens_venda iv
+						  LEFT JOIN produtos p ON p.id = iv.produto
+						  WHERE iv.id_venda = 0 AND iv.usuario = '$id_usuario'
+						  ORDER BY iv.id DESC");
 $res = $query_con->fetchAll(PDO::FETCH_ASSOC);
-$total_reg = @count($res);
+$total_reg = count($res);
 if($total_reg > 0){ 
 	for($i=0; $i < $total_reg; $i++){
 	foreach ($res[$i] as $key => $value){	}
 
 		$id_venda = $res[$i]['id'];
-		$id_item = $res[$i]['produto'];
 		$quantidade = $res[$i]['quantidade'];
 		$valor = $res[$i]['valor'];
 		$valor_total_item = $res[$i]['total'];
@@ -29,12 +32,9 @@ if($total_reg > 0){
 		$total_venda += $valor_total_item;
 		$total_vendaF =  number_format($total_venda, 2, ',', '.');
 
-$query2 = $pdo->query("SELECT * FROM produtos where id = '$id_item'");
-$res2 = $query2->fetchAll(PDO::FETCH_ASSOC);
-$valor_produto = $res2[0]['valor_venda'];
-$nome_produto = $res2[0]['nome'];
-$foto_produto = $res2[0]['foto'];
-$estoque_produto = $res2[0]['estoque'];
+$nome_produto = isset($res[$i]['nome_produto']) ? $res[$i]['nome_produto'] : '';
+$foto_produto = isset($res[$i]['foto_produto']) ? $res[$i]['foto_produto'] : '';
+$estoque_produto = isset($res[$i]['estoque_produto']) ? $res[$i]['estoque_produto'] : 0;
 
 
     $dados[] = array(

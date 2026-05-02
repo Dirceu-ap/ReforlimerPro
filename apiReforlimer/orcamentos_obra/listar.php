@@ -5,43 +5,44 @@ require_once(__DIR__ . '/../conexao.php');
 try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    $data1 = isset($_GET['data']) ? $_GET['data'] : null;
-    $data2 = isset($_GET['data1']) ? $_GET['data1'] : null;
-    $cliente = isset($_GET['cliente']) ? trim($_GET['cliente']) : null;
-    $search = isset($_GET['search']) ? trim($_GET['search']) : null;
+    $data1 = isset($_GET['data']) ? trim((string)$_GET['data']) : '';
+    $data2 = isset($_GET['data1']) ? trim((string)$_GET['data1']) : '';
+    $cliente = isset($_GET['cliente']) ? trim((string)$_GET['cliente']) : '';
+    $search = isset($_GET['search']) ? trim((string)$_GET['search']) : '';
 
-    if ($data1 && $data2) {
-        $sql = "SELECT o.id, c.nome AS cliente, o.data_orcamento, o.valor_total, o.status, o.validade, o.descricao, o.tipo_obra, o.area_principal, o.local
-                FROM orcamentos_obra o
-                LEFT JOIN clientes c ON o.cliente_id = c.id
-                WHERE o.data_orcamento BETWEEN ? AND ?
-                ORDER BY o.data_orcamento DESC";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$data1, $data2]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $sql = "SELECT o.id, c.nome AS cliente, o.data_orcamento, o.valor_total, o.status, o.validade, o.descricao, o.tipo_obra, o.area_principal, o.local
-                FROM orcamentos_obra o
-                LEFT JOIN clientes c ON o.cliente_id = c.id
-                ORDER BY o.data_orcamento DESC
-                LIMIT 200";
-        $stmt = $pdo->query($sql);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $termRaw = $cliente !== '' ? $cliente : $search;
+    $hasPeriodo = ($data1 !== '' && $data2 !== '');
+
+    $sql = "SELECT o.id, c.nome AS cliente, o.data_orcamento, o.valor_total, o.status, o.validade, o.descricao, o.tipo_obra, o.area_principal, o.local
+            FROM orcamentos_obra o
+            LEFT JOIN clientes c ON o.cliente_id = c.id";
+
+    $where = [];
+    $params = [];
+
+    if ($hasPeriodo) {
+        $where[] = "o.data_orcamento BETWEEN :data1 AND :data2";
+        $params[':data1'] = $data1;
+        $params[':data2'] = $data2;
     }
 
-    if (($cliente !== null && $cliente !== '') || ($search !== null && $search !== '')) {
-        $term = mb_strtolower($cliente ?? $search, 'UTF-8');
-        $rows = array_values(array_filter($rows, function($r) use ($term) {
-            $clienteNome = mb_strtolower($r['cliente'] ?? '', 'UTF-8');
-            $descricao  = mb_strtolower($r['descricao'] ?? '', 'UTF-8');
-            $tipoObra   = mb_strtolower($r['tipo_obra'] ?? '', 'UTF-8');
-            $local      = mb_strtolower($r['local'] ?? '', 'UTF-8');
-            return mb_stripos($clienteNome, $term, 0, 'UTF-8') !== false
-                || mb_stripos($descricao, $term, 0, 'UTF-8') !== false
-                || mb_stripos($tipoObra, $term, 0, 'UTF-8') !== false
-                || mb_stripos($local, $term, 0, 'UTF-8') !== false;
-        }));
+    if ($termRaw !== '') {
+        $where[] = "(LOWER(COALESCE(c.nome, '')) LIKE :term OR LOWER(COALESCE(o.descricao, '')) LIKE :term OR LOWER(COALESCE(o.tipo_obra, '')) LIKE :term OR LOWER(COALESCE(o.local, '')) LIKE :term)";
+        $params[':term'] = '%' . mb_strtolower($termRaw, 'UTF-8') . '%';
     }
+
+    if (count($where) > 0) {
+        $sql .= ' WHERE ' . implode(' AND ', $where);
+    }
+
+    $sql .= ' ORDER BY o.data_orcamento DESC';
+    if (!$hasPeriodo) {
+        $sql .= ' LIMIT 200';
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode(['success' => true, 'resultado' => $rows], JSON_UNESCAPED_UNICODE);
 } catch (Exception $e) {

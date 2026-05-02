@@ -4,17 +4,18 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$buscar = '%' .@$_GET['buscar']. '%';
+$buscarTermo = trim((string)($_GET['buscar'] ?? ''));
+$buscar = '%' . $buscarTermo . '%';
 
-$query = $pdo->prepare("SELECT * from clientes where nome LIKE '$buscar' or email LIKE '$buscar' order by nome ASC");
+$query = $pdo->prepare("SELECT id, nome, telefone, email, ativo FROM clientes WHERE nome LIKE :buscar OR email LIKE :buscar ORDER BY nome ASC");
+$query->bindValue(':buscar', $buscar, PDO::PARAM_STR);
 
 $query->execute();
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
+$dados = array();
 
 for ($i=0; $i < count($res); $i++) { 
-    foreach ($res[$i] as $key => $value) {  }
-
     $dados[] = array(
         'id' => $res[$i]['id'],
         'nome' => $res[$i]['nome'],

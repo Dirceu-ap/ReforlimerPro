@@ -4,12 +4,18 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$limite = (isset($_GET['limite'])) ? $_GET['limite'] : 50; 
-$pagina = (isset($_GET['pagina'])) ? $_GET['pagina'] : 1; 
+$limite = (isset($_GET['limite'])) ? intval($_GET['limite']) : 50; 
+$pagina = (isset($_GET['pagina'])) ? intval($_GET['pagina']) : 1; 
+
+if ($limite <= 0) $limite = 50;
+if ($pagina <= 0) $pagina = 1;
 
 $inicio = ($limite * $pagina) - $limite; 
 
-$query = $pdo->prepare("SELECT * FROM colaboradores ORDER BY ativo DESC, id DESC LIMIT $inicio, $limite");
+$query = $pdo->prepare("SELECT id, nome, telefone, email, ativo, funcao, salario_diario FROM colaboradores ORDER BY ativo DESC, id DESC LIMIT :inicio, :limite");
+
+$query->bindValue(':inicio', $inicio, PDO::PARAM_INT);
+$query->bindValue(':limite', $limite, PDO::PARAM_INT);
 
 $query->execute();
 

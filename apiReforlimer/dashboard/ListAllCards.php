@@ -2,48 +2,47 @@
 
 include_once('../conexao.php');
 
+function scalar_count(PDO $pdo, string $sql): int {
+    $stmt = $pdo->query($sql);
+    return (int)$stmt->fetchColumn();
+}
 
+$total_pessoas = scalar_count($pdo, "SELECT COUNT(*) FROM clientes WHERE ativo = 'Sim'");
 
-$postjson = json_decode(file_get_contents('php://input'), true);
-
-$query = $pdo->query("SELECT * from clientes where ativo = 'Sim'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$total_pessoas = @count($res);
-
-
-$query = $pdo->query("SELECT * from contas_receber where vencimento = curDate() and UPPER(status) = 'PENDENTE'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$contasaReceberPendentes = @count($res);
+$contasaReceberPendentes = scalar_count(
+    $pdo,
+    "SELECT COUNT(*) FROM contas_receber WHERE vencimento = CURDATE() AND UPPER(status) = 'PENDENTE'"
+);
 
 // Considera como recebidas hoje apenas as contas com vencimento hoje
 // que efetivamente foram baixadas hoje.
-$query = $pdo->query("SELECT * from contas_receber where vencimento = curDate() and UPPER(status) = 'PAGA' and data_baixa = curDate()");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$contasRecebidas = @count($res);
+$contasRecebidas = scalar_count(
+    $pdo,
+    "SELECT COUNT(*) FROM contas_receber WHERE vencimento = CURDATE() AND UPPER(status) = 'PAGA' AND data_baixa = CURDATE()"
+);
 
 // Total base do progresso da Home: pendentes de hoje + recebidas hoje.
-// Isso evita contar títulos já pagos em outro dia como se fossem movimentação de hoje.
+// Isso evita contar titulos ja pagos em outro dia como se fossem movimentacao de hoje.
 $contasaReceber = $contasaReceberPendentes + $contasRecebidas;
 
-$query = $pdo->query("SELECT * from contas_pagar where vencimento = curDate() and status = 'Pendente'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$contasaPagarHoje = @count($res);
+$contasaPagarHoje = scalar_count(
+    $pdo,
+    "SELECT COUNT(*) FROM contas_pagar WHERE vencimento = CURDATE() AND UPPER(status) = 'PENDENTE'"
+);
 
-$query = $pdo->query("SELECT * from contas_receber where vencimento < curDate() and status != 'Paga'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$contas_receber_vencidas = @count($res);
+$contas_receber_vencidas = scalar_count(
+    $pdo,
+    "SELECT COUNT(*) FROM contas_receber WHERE vencimento < CURDATE() AND UPPER(status) <> 'PAGA'"
+);
 
-$query = $pdo->query("SELECT * from contas_pagar where vencimento < curDate() and status != 'Paga'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$contas_pagar_vencidas = @count($res);
+$contas_pagar_vencidas = scalar_count(
+    $pdo,
+    "SELECT COUNT(*) FROM contas_pagar WHERE vencimento < CURDATE() AND UPPER(status) <> 'PAGA'"
+);
 
-$query = $pdo->query("SELECT * from fornecedores where ativo = 'Sim'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$fornCadastrados = @count($res);
+$fornCadastrados = scalar_count($pdo, "SELECT COUNT(*) FROM fornecedores WHERE ativo = 'Sim'");
 
-$query = $pdo->query("SELECT * from produtos where ativo = 'Sim'");
-$res = $query->fetchAll(PDO::FETCH_ASSOC);
-$produtosCadastrados = @count($res);
+$produtosCadastrados = scalar_count($pdo, "SELECT COUNT(*) FROM produtos WHERE ativo = 'Sim'");
 
 $result = json_encode(array('success'=>true, 
     'quantidade_clientes'=>$total_pessoas,

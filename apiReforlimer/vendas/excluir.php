@@ -4,8 +4,8 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$id = @$_GET['id'];
-$user = @$_GET['user'];
+$id = $_GET['id'] ?? '';
+$user = $_GET['user'] ?? '';
 
 $query = $pdo->query("SELECT * from usuarios where id = '$user' ");
 $res = $query->fetchAll(PDO::FETCH_ASSOC);

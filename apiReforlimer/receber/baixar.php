@@ -82,6 +82,19 @@ $id_venda = $res[0]['id_venda'];
 // campo de localidade (se existir na tabela)
 $local = isset($res[0]['local']) ? $res[0]['local'] : '';
 
+// Sempre usa o lançamento informado na baixa; se vier vazio, mantém o lançamento da conta.
+$entrada_baixa = trim((string)$saida);
+if($entrada_baixa === ''){
+    $entrada_baixa = trim((string)$cp3);
+}
+if(
+    $entrada_baixa === '' ||
+    stripos($entrada_baixa, 'orcamento obra') !== false ||
+    stripos($entrada_baixa, 'orçamento obra') !== false
+){
+    $entrada_baixa = 'Caixa';
+}
+
 $query2 = $pdo->query("SELECT * FROM clientes WHERE id = '$cp2'");
 $res2 = $query2->fetchAll(PDO::FETCH_ASSOC);
 if(@count($res2) > 0){
@@ -110,7 +123,7 @@ if($valor == $cp9){
     if(!$temColunaAcrescimo){
         $juros_total += floatval($valor_acrescimo);
     }
-    $pdo->query("UPDATE $pagina set entrada = '$saida', usuario_baixa = '$id_usuario', status = 'Paga', juros = '$juros_total', multa = '$valor_multa', desconto = '$valor_desconto', subtotal = '$subtotal', data_baixa = curDate() where id = '$id'");
+    $pdo->query("UPDATE $pagina set entrada = '$entrada_baixa', usuario_baixa = '$id_usuario', status = 'Paga', juros = '$juros_total', multa = '$valor_multa', desconto = '$valor_desconto', subtotal = '$subtotal', data_baixa = curDate() where id = '$id'");
 
     //CRIAR A PRÓXIMA CONTA A PAGAR
     $frequencia = $cp8;
@@ -158,7 +171,7 @@ if($valor == $cp9){
     $descricao_conta = '(Resíduo) ' .$descricao_conta;
     //PEGAR RESIDUOS DA CONTA
     $total_resid = 0;
-    $query = $pdo->query("SELECT * FROM valor_parcial WHERE id_conta = '$id'");
+    $query = $pdo->query("SELECT * FROM valor_parcial WHERE id_conta = '$id' AND UPPER(TRIM(COALESCE(tipo, ''))) LIKE 'RECEBER%'");
     $res = $query->fetchAll(PDO::FETCH_ASSOC);
     if(@count($res) > 0){
     
@@ -171,13 +184,13 @@ if($valor == $cp9){
 
     $cp9 = $cp9 - $subtotal;
 
-    $pdo->query("INSERT INTO valor_parcial set id_conta = '$id', tipo = 'Pagar', valor = '$subtotal', data = curDate(), usuario = '$id_usuario'");
+    $pdo->query("INSERT INTO valor_parcial set id_conta = '$id', tipo = 'Receber', valor = '$subtotal', data = curDate(), usuario = '$id_usuario'");
 
     $juros_total = floatval($valor_juros);
     if(!$temColunaAcrescimo){
         $juros_total += floatval($valor_acrescimo);
     }
-    $pdo->query("UPDATE $pagina set entrada = '$saida', usuario_baixa = '$id_usuario', status = 'Pendente', juros = '$juros_total', multa = '$valor_multa', desconto = '$valor_desconto', valor = '$cp9', subtotal = '$subtotal', data_baixa = curDate() where id = '$id'");
+    $pdo->query("UPDATE $pagina set entrada = '$entrada_baixa', usuario_baixa = '$id_usuario', status = 'Pendente', juros = '$juros_total', multa = '$valor_multa', desconto = '$valor_desconto', valor = '$cp9', subtotal = '$subtotal', data_baixa = curDate() where id = '$id'");
 
 }
 
@@ -197,8 +210,26 @@ foreach($camposOpcionais as $campo => $valorCampo){
     }
 }
 
-//LANÇAR NAS MOVIMENTAÇÕES (inclui local quando existir)
-    $pdo->query("INSERT INTO movimentacoes set tipo = 'Entrada', movimento = 'Conta à Receber', descricao = '$descricao_conta', valor = '$subtotal', usuario = '$id_usuario', data = curDate(), lancamento = '$saida', plano_conta = '$cp5', documento = '$cp4', caixa_periodo = '$caixa_aberto', id_mov = '$id_venda', local = '$local'");
+// LANÇAR NAS MOVIMENTAÇÕES (inclui local quando existir)
+$stmtMov = $pdo->prepare("INSERT INTO movimentacoes (tipo, movimento, descricao, valor, usuario, data, lancamento, plano_conta, documento, caixa_periodo, id_mov, local) VALUES ('Entrada', 'Conta à Receber', :descricao, :valor, :usuario, curDate(), :lancamento, :plano_conta, :documento, :caixa_periodo, :id_mov, :local)");
+$id_mov_ref = intval($id_venda) > 0 ? intval($id_venda) : intval($id);
+$okMov = $stmtMov->execute(array(
+    ':descricao' => $descricao_conta,
+    ':valor' => $subtotal,
+    ':usuario' => $id_usuario,
+    ':lancamento' => $entrada_baixa,
+    ':plano_conta' => $cp5,
+    ':documento' => $cp4,
+    ':caixa_periodo' => $caixa_aberto,
+    ':id_mov' => $id_mov_ref,
+    ':local' => $local,
+));
+
+if(!$okMov){
+    $info = $stmtMov->errorInfo();
+    echo json_encode(array('mensagem' => 'Erro ao gravar movimentação da baixa.', 'sucesso' => false, 'erro' => $info));
+    exit();
+}
 
 
 

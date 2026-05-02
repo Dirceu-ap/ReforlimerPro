@@ -4,18 +4,43 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$id = @$_GET['id'];
+$id = $_GET['id'] ?? '';
 
-$query = $pdo->prepare("SELECT * from contas_pagar where id = '$id'");
+$query = $pdo->prepare("SELECT
+                            cp.*,
+                            COALESCE(
+                                CASE
+                                    WHEN cp.saida = 'Orcamento' THEN cli_orc.nome
+                                    WHEN cp.cliente LIKE 'C-%' THEN COALESCE(colab.nome, forn_colab.nome)
+                                    ELSE forn.nome
+                                END,
+                                cp.descricao
+                            ) AS fornecedor_nome,
+                            COALESCE(u.nome, 'Sem Usuário') AS nome_usu_lanc
+                        FROM contas_pagar cp
+                        LEFT JOIN clientes cli_orc
+                               ON cp.saida = 'Orcamento' AND cli_orc.id = cp.cliente
+                        LEFT JOIN colaboradores colab
+                               ON cp.saida <> 'Orcamento'
+                              AND cp.cliente LIKE 'C-%'
+                              AND colab.id = SUBSTRING(cp.cliente, 3)
+                        LEFT JOIN fornecedores forn_colab
+                               ON cp.saida <> 'Orcamento'
+                              AND cp.cliente LIKE 'C-%'
+                              AND forn_colab.id = SUBSTRING(cp.cliente, 3)
+                        LEFT JOIN fornecedores forn
+                               ON cp.saida <> 'Orcamento'
+                              AND cp.cliente NOT LIKE 'C-%'
+                              AND forn.id = cp.cliente
+                        LEFT JOIN usuarios u ON u.id = cp.usuario_lanc
+                        WHERE cp.id = :id
+                        LIMIT 1");
 
-$query->execute();
+$query->execute([':id' => $id]);
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
 
 for ($i=0; $i < count($res); $i++) { 
-    foreach ($res[$i] as $key => $value) {
-    }
-
      $arquivo = $res[$i]['arquivo'];
      //EXTRAIR EXTENSÃO DO ARQUIVO
     $ext = pathinfo($arquivo, PATHINFO_EXTENSION);   
@@ -27,62 +52,16 @@ for ($i=0; $i < count($res); $i++) {
         $tumb_arquivo = $arquivo;
     }
 
-    $cliente = $res[$i]['cliente'];
-    $saida   = $res[$i]['saida'];
-
-    // Para contas oriundas de Orçamento comum, o campo `cliente` guarda
-    // o ID da tabela `clientes`, garantindo vínculo com o mesmo cliente.
-    if ($saida === 'Orcamento') {
-        $cliId = $cliente;
-        $query1 = $pdo->query("SELECT * FROM clientes WHERE id = '$cliId' ");
-        $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-        if(@count($res1) > 0){
-            @$fornecedor_nome = $res1[0]['nome'];
-        }else{
-            @$fornecedor_nome = $res[$i]['descricao'];
-        }
-    } else {
-        // Se cliente começar com "C-", é colaborador; caso contrário, fornecedor
-        if (substr($cliente, 0, 2) === 'C-') {
-            $colab_id = substr($cliente, 2);
-            $query1 = $pdo->query("SELECT * from colaboradores where id = '$colab_id' ");
-            $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-            if(@count($res1) > 0){
-                @$fornecedor_nome = $res1[0]['nome'];
-            }else{
-                // fallback para fornecedor ou descrição
-                $query1 = $pdo->query("SELECT * from fornecedores where id = '$colab_id' ");
-                $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-                if(@count($res1) > 0){
-                    @$fornecedor_nome = $res1[0]['nome'];
-                }else{
-                    @$fornecedor_nome = $res[$i]['descricao'];
-                }
-            }
-        } else {
-            $fornecedor = $cliente;
-            // Demais contas: mantém lógica original, buscando em fornecedores
-            $query1 = $pdo->query("SELECT * from fornecedores where id = '$fornecedor' ");
-            $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-            if(@count($res1) > 0){
-                @$fornecedor_nome = $res1[0]['nome'];
-            }else{
-                @$fornecedor_nome = $res[$i]['descricao'];
-            }
-        }
-    }
-
-     $usu = $res[$i]['usuario_lanc'];
-     $query1 = $pdo->query("SELECT * from usuarios where id = '$usu' ");
-    $res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-    if(@count($res1) > 0){
-        $nome_usu_lanc = $res1[0]['nome'];
-    }else{
-        $nome_usu_lanc = 'Sem Usuário';
-    }
+    $fornecedor_nome = $res[$i]['fornecedor_nome'];
+    $nome_usu_lanc = $res[$i]['nome_usu_lanc'];
 
     $data_emissao = implode('/', array_reverse(explode('-', $res[$i]['data_emissao'])));
     $data_venc = implode('/', array_reverse(explode('-', $res[$i]['vencimento'])));
+    $data_baixa_raw = isset($res[$i]['data_baixa']) ? trim((string)$res[$i]['data_baixa']) : '';
+    $data_baixa = '';
+    if($data_baixa_raw !== '' && strpos($data_baixa_raw, '-') !== false){
+        $data_baixa = implode('/', array_reverse(explode('-', $data_baixa_raw)));
+    }
     
     $valorF = number_format($res[$i]['valor'], 2, ',', '.'); 
     $subtotalRaw = isset($res[$i]['subtotal']) ? $res[$i]['subtotal'] : '';
@@ -97,6 +76,8 @@ for ($i=0; $i < count($res); $i++) {
         'fornF' => $fornecedor_nome,
         'saida' => $res[$i]['saida'],
         'vencimento' => $res[$i]['vencimento'],
+        'data_baixa' => $data_baixa_raw,
+        'dataBaixaF' => $data_baixa,
         'emis' => $res[$i]['data_emissao'],
         'vencF' => $data_venc,
         'emissao' => $data_emissao,

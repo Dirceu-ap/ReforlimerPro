@@ -70,12 +70,12 @@ function calculateDaysLate($dueDateYmd, $todayYmd = null) {
     if ($dueTs === false) return 0;
 
     $todayBase = $todayYmd ? (string)$todayYmd : date('Y-m-d');
-    $todayTs = strtotime($todayBase . ' 00:00:00');
-    if ($todayTs === false) $todayTs = time();
+    $todayRefTs = strtotime($todayBase . ' 00:00:00');
+    if ($todayRefTs === false) $todayRefTs = time();
 
-    if ($todayTs <= $dueTs) return 0;
+    if ($todayRefTs <= $dueTs) return 0;
 
-    $diff = $todayTs - $dueTs;
+    $diff = $todayRefTs - $dueTs;
     return (int)floor($diff / 86400);
 }
 
@@ -190,6 +190,8 @@ try {
         ], 400);
     }
 
+    $sandbox = (bool)($config['sandbox'] ?? true);
+
     $raw = file_get_contents('php://input');
     $input = json_decode($raw, true);
     if (!is_array($input)) {
@@ -197,6 +199,7 @@ try {
     }
 
     $idConta = trim((string)($input['idConta'] ?? ''));
+    $cancelExistingPix = parseBoolean($input['cancelExistingPix'] ?? false);
     $valor = normalizeMoney($input['valor'] ?? '0');
     $vencimento = normalizeDateYmd($input['vencimento'] ?? '');
     $pagadorNome = trim((string)($input['pagadorNome'] ?? 'Consumidor Final'));
@@ -208,6 +211,36 @@ try {
     if ($idConta === '') {
         respond(['success' => false, 'message' => 'idConta obrigatorio.'], 400);
     }
+
+    $externalReference = 'RECEBER_' . $idConta;
+
+    if ($cancelExistingPix) {
+        $list = asaasRequest('GET', '/payments?externalReference=' . urlencode($externalReference) . '&limit=50', $apiKey, $sandbox);
+        $items = is_array($list['data'] ?? null) ? $list['data'] : [];
+        $cancelableStatuses = ['PENDING', 'OVERDUE'];
+        $cancelledIds = [];
+
+        foreach ($items as $item) {
+            if (!is_array($item)) continue;
+            if ((string)($item['billingType'] ?? '') !== 'PIX') continue;
+            if (!in_array((string)($item['status'] ?? ''), $cancelableStatuses, true)) continue;
+
+            $paymentIdToCancel = trim((string)($item['id'] ?? ''));
+            if ($paymentIdToCancel === '') continue;
+
+            asaasRequest('DELETE', '/payments/' . $paymentIdToCancel, $apiKey, $sandbox);
+            $cancelledIds[] = $paymentIdToCancel;
+        }
+
+        respond([
+            'success' => true,
+            'mode' => 'cancelExistingPix',
+            'externalReference' => $externalReference,
+            'cancelledCount' => count($cancelledIds),
+            'cancelledIds' => $cancelledIds,
+        ], 200);
+    }
+
     if ($valor <= 0) {
         respond(['success' => false, 'message' => 'valor invalido.'], 400);
     }
@@ -215,7 +248,6 @@ try {
         respond(['success' => false, 'message' => 'vencimento invalido. Use YYYY-MM-DD ou DD/MM/YYYY.'], 400);
     }
 
-    $sandbox = (bool)($config['sandbox'] ?? true);
     $multaPercentConfig = (float)($config['multaPercent'] ?? 2.0);
     $jurosPercentDiaConfig = (float)($config['jurosPercentDia'] ?? 0.0334);
     $multaPercent = isset($input['multaPercent'])
@@ -234,8 +266,6 @@ try {
     );
 
     $customerId = trim((string)($config['defaultCustomerId'] ?? ''));
-    $externalReference = 'RECEBER_' . $idConta;
-
     $diasAtraso = calculateDaysLate($vencimento, $dataPagamento !== '' ? $dataPagamento : null);
 
     if (isChargeExpiredByLateDays($diasAtraso, $maxDiasPosVencimento)) {

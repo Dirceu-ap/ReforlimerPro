@@ -71,14 +71,23 @@ $dados = [];
 
 try {
     if ($start && $end) {
-        $sql = "SELECT * FROM vendas WHERE data_lanc BETWEEN :start AND :end ORDER BY data_lanc ASC, id ASC";
+        $sql = "SELECT v.*, c.nome AS nome_cliente, u.nome AS nome_usuario
+                FROM vendas v
+                LEFT JOIN clientes c ON c.id = v.cliente
+                LEFT JOIN usuarios u ON u.id = v.usuario
+                WHERE v.data_lanc BETWEEN :start AND :end
+                ORDER BY v.data_lanc ASC, v.id ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':start', $start);
         $stmt->bindValue(':end', $end);
         $stmt->execute();
     } else {
         // sem período informado, retornar todos (mantém compatibilidade)
-        $stmt = $pdo->query("SELECT * FROM vendas ORDER BY data_lanc ASC, id ASC");
+        $stmt = $pdo->query("SELECT v.*, c.nome AS nome_cliente, u.nome AS nome_usuario
+                             FROM vendas v
+                             LEFT JOIN clientes c ON c.id = v.cliente
+                             LEFT JOIN usuarios u ON u.id = v.usuario
+                             ORDER BY v.data_lanc ASC, v.id ASC");
     }
 
     $res = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -114,25 +123,8 @@ try {
             $cp6b = $formatBR($cp6);
             $cp5b = $formatBR($cp5);
 
-            // recuperar nome cliente
-            $nome_cliente = 'Sem Cliente';
-            if (!empty($cp12)) {
-                $q1 = $pdo->prepare("SELECT nome FROM clientes WHERE id = :id LIMIT 1");
-                $q1->bindValue(':id', $cp12);
-                $q1->execute();
-                $r1 = $q1->fetchAll(PDO::FETCH_ASSOC);
-                if (count($r1) > 0) $nome_cliente = $r1[0]['nome'];
-            }
-
-            // recuperar nome usuario
-            $nome_usuario = '';
-            if (!empty($cp2)) {
-                $q2 = $pdo->prepare("SELECT nome FROM usuarios WHERE id = :id LIMIT 1");
-                $q2->bindValue(':id', $cp2);
-                $q2->execute();
-                $r2 = $q2->fetchAll(PDO::FETCH_ASSOC);
-                if (count($r2) > 0) $nome_usuario = $r2[0]['nome'];
-            }
+            $nome_cliente = !empty($row['nome_cliente']) ? $row['nome_cliente'] : 'Sem Cliente';
+            $nome_usuario = !empty($row['nome_usuario']) ? $row['nome_usuario'] : '';
 
             $classe = '#bf0808';
             if ($cp11 === 'Concluída') { $classe = '#046b33'; }

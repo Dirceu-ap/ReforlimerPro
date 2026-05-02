@@ -4,27 +4,30 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$limite = (isset($_GET['limite'])) ? $_GET['limite'] : 5; 
-$pagina = (isset($_GET['pagina'])) ? $_GET['pagina'] : 1; 
+$limite = (isset($_GET['limite'])) ? intval($_GET['limite']) : 5; 
+$pagina = (isset($_GET['pagina'])) ? intval($_GET['pagina']) : 1; 
+
+if ($limite <= 0) $limite = 5;
+if ($pagina <= 0) $pagina = 1;
 
 $inicio = ($limite * $pagina) - $limite; 
 
-$query = $pdo->prepare("SELECT * FROM produtos where ativo = 'Sim' and estoque > 0 ORDER BY id DESC LIMIT $inicio, $limite");
+$query = $pdo->prepare("SELECT p.id, p.codigo, p.nome, p.descricao, p.estoque, p.valor_compra, p.valor_venda, p.fornecedor, p.foto, p.ativo, p.lucro, COALESCE(c.nome, 'Sem Categoria') AS categoria_nome
+						FROM produtos p
+						LEFT JOIN cat_produtos c ON c.id = p.categoria
+						WHERE p.ativo = 'Sim' AND p.estoque > 0
+						ORDER BY p.id DESC
+						LIMIT :inicio, :limite");
+
+$query->bindValue(':inicio', $inicio, PDO::PARAM_INT);
+$query->bindValue(':limite', $limite, PDO::PARAM_INT);
 
 $query->execute();
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
+$dados = array();
 
 for ($i=0; $i < count($res); $i++) { 
-	$cat = $res[$i]['categoria'];
-	$query1 = $pdo->query("SELECT * from cat_produtos where id = '$cat' ");
-		$res1 = $query1->fetchAll(PDO::FETCH_ASSOC);
-		if(@count($res1) > 0){
-			$nome_cat = $res1[0]['nome'];
-		}else{
-			$nome_cat = 'Sem Categoria';
-		}
-
     $dados[] = array(
         'id' => $res[$i]['id'],
         'codigo' => $res[$i]['codigo'],
@@ -34,7 +37,7 @@ for ($i=0; $i < count($res); $i++) {
 		'valor_compra' => $res[$i]['valor_compra'],
 		'valor_venda' => $res[$i]['valor_venda'],
 		'fornecedor' => $res[$i]['fornecedor'],
-		'categoria' => $nome_cat,
+		'categoria' => $res[$i]['categoria_nome'],
 		'foto' => $res[$i]['foto'],
 		'ativo' => $res[$i]['ativo'],
 		'lucro' => $res[$i]['lucro'],
@@ -44,7 +47,7 @@ for ($i=0; $i < count($res); $i++) {
 
 
 if(count($res) > 0){
-    $result = json_encode(array('success'=>true, 'resultado'=>@$dados, 'totalItems'=>@count($dados) + ($inicio)));
+	$result = json_encode(array('success'=>true, 'resultado'=>$dados, 'totalItems'=>count($dados) + ($inicio)));
 }else{
     $result = json_encode(array('success'=>false, 'resultado'=>'0'));
 }

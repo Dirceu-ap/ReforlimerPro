@@ -6,10 +6,33 @@ $postjson = json_decode(file_get_contents('php://input'), true);
 
 $quantidade = 13;
 
-$data = @$_GET['data'];
-$data1 = @$_GET['data1'];
-$busca = @$_GET['lanc'];
+$data = $_GET['data'] ?? '';
+$data1 = $_GET['data1'] ?? '';
+$busca = $_GET['lanc'] ?? '';
 $cliente = $_GET['cliente'] ?? '';
+$includeSemLanc = isset($_GET['include_sem_lanc']) ? trim((string)$_GET['include_sem_lanc']) : '';
+$incluirSemLanc = ($includeSemLanc === '1' || strtolower($includeSemLanc) === 'true' || strtolower($includeSemLanc) === 'sim');
+
+$lancLimpo = trim((string)$busca);
+$filtrarPorLanc = ($lancLimpo !== '' && strtolower($lancLimpo) !== 'all' && strtolower($lancLimpo) !== 'todos');
+
+function buildLancamentoWhere(bool $filtrarPorLanc, bool $incluirSemLanc): string {
+    if (!$filtrarPorLanc) {
+        return '1=1';
+    }
+
+    if ($incluirSemLanc) {
+        return "(lancamento = :lanc OR COALESCE(lancamento, '') = '')";
+    }
+
+    return 'lancamento = :lanc';
+}
+
+function bindLancamentoParams(PDOStatement $stmt, bool $filtrarPorLanc, string $lancLimpo): void {
+    if ($filtrarPorLanc) {
+        $stmt->bindValue(':lanc', $lancLimpo);
+    }
+}
 
 if ($cliente != '') {
     $query = $pdo->prepare("SELECT id, 'receber' as tipo, cliente, valor, vencimento, status, descricao 
@@ -36,20 +59,22 @@ if ($cliente != '') {
 $total_saldo_geral = 0;
 $total_saldo_geralF = 0;
 $classe_saldo_geral = '#0d6327';
-
-$query_t = $pdo->prepare("SELECT * FROM movimentacoes WHERE lancamento = :lanc ORDER BY id DESC");
-$query_t->bindValue(':lanc', $busca);
+$whereLancamento = buildLancamentoWhere($filtrarPorLanc, $incluirSemLanc);
+$sqlSaldo = "
+    SELECT
+        COALESCE(SUM(CASE WHEN tipo = 'Entrada' THEN valor ELSE -valor END), 0) AS saldo_geral,
+        COUNT(*) AS total_linhas
+    FROM movimentacoes
+    WHERE {$whereLancamento}
+";
+$query_t = $pdo->prepare($sqlSaldo);
+bindLancamentoParams($query_t, $filtrarPorLanc, $lancLimpo);
 $query_t->execute();
-$res_t = $query_t->fetchAll(PDO::FETCH_ASSOC);
+$saldoRow = $query_t->fetch(PDO::FETCH_ASSOC);
 
-if(count($res_t) > 0){
-    foreach($res_t as $item){
-        if($item['tipo'] == 'Entrada'){
-            $total_saldo_geral += $item['valor'];
-        }else{
-            $total_saldo_geral -= $item['valor'];
-        }
-    }
+$totalLinhasSaldo = (int)($saldoRow['total_linhas'] ?? 0);
+$total_saldo_geral = (float)($saldoRow['saldo_geral'] ?? 0);
+if($totalLinhasSaldo > 0){
     if($total_saldo_geral < 0){
         $classe_saldo_geral = '#ab3824';
     }
@@ -57,16 +82,37 @@ if(count($res_t) > 0){
 }
 
 // Consulta principal filtrando por data e tipo de lançamento
-$query = $pdo->prepare("SELECT * FROM movimentacoes WHERE (data BETWEEN :data AND :data1) AND lancamento = :lanc ORDER BY data ASC, id ASC");
+$query = $pdo->prepare("SELECT id, tipo, movimento, descricao, valor, usuario, data, lancamento, plano_conta, documento, local FROM movimentacoes WHERE (data BETWEEN :data AND :data1) AND {$whereLancamento} ORDER BY data ASC, id ASC");
 $query->bindValue(':data', $data);
 $query->bindValue(':data1', $data1);
-$query->bindValue(':lanc', $busca);
+bindLancamentoParams($query, $filtrarPorLanc, $lancLimpo);
 $query->execute();
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
 
 $dados = [];
 $total_saldo = 0;
+
+$usuariosMap = [];
+if (count($res) > 0) {
+    $idsUsuarios = [];
+    for ($i = 0; $i < count($res); $i++) {
+        $uid = isset($res[$i]['usuario']) ? (string)$res[$i]['usuario'] : '';
+        if ($uid !== '') {
+            $idsUsuarios[$uid] = true;
+        }
+    }
+
+    if (count($idsUsuarios) > 0) {
+        $ids = array_keys($idsUsuarios);
+        $idsSql = implode(',', array_map('intval', $ids));
+        $queryUsuarios = $pdo->query("SELECT id, nome FROM usuarios WHERE id IN ($idsSql)");
+        $resUsuarios = $queryUsuarios->fetchAll(PDO::FETCH_ASSOC);
+        for ($u = 0; $u < count($resUsuarios); $u++) {
+            $usuariosMap[(string)$resUsuarios[$u]['id']] = $resUsuarios[$u]['nome'];
+        }
+    }
+}
 
 for ($i = 0; $i < count($res); $i++) {
     $item = $res[$i];
@@ -82,23 +128,8 @@ for ($i = 0; $i < count($res); $i++) {
     $documento = $item['documento'];
     $local = isset($item['local']) ? $item['local'] : '';
 
-    // Saldo do período até o registro atual
-    $total_saldo_periodo = 0;
-    $query_t = $pdo->prepare("SELECT * FROM movimentacoes WHERE lancamento = :lanc AND data >= :data_ini AND data <= :data_fim ORDER BY data ASC, id ASC");
-    $query_t->bindValue(':lanc', $busca);
-    $query_t->bindValue(':data_ini', $res[0]['data']); // data do primeiro registro do período
-    $query_t->bindValue(':data_fim', $data_mov);
-    $query_t->execute();
-    $res_t = $query_t->fetchAll(PDO::FETCH_ASSOC);
-
-    foreach($res_t as $item_t){
-        if($item_t['id'] == $id) break;
-        if($item_t['tipo'] == 'Entrada'){
-            $total_saldo_periodo += $item_t['valor'];
-        }else{
-            $total_saldo_periodo -= $item_t['valor'];
-        }
-    }
+    // Saldo do período em ordem cronológica (equivale ao acumulado da consulta principal)
+    $total_saldo_periodo = $total_saldo;
 
     // Atualiza saldo total
     if($tipo == 'Entrada'){
@@ -116,15 +147,8 @@ for ($i = 0; $i < count($res); $i++) {
     $classe_saldo = $total_saldo < 0 ? '#0d6327' : '#ab3824';
     $classe_saldo_periodo = $total_saldo_periodo < 0 ? '#ab3824' : '#0d6327';
 
-    // Busca nome do usuário
-    $nome_usu = "";
-    $query1 = $pdo->prepare("SELECT nome FROM usuarios WHERE id = :id");
-    $query1->bindValue(':id', $usuario);
-    $query1->execute();
-    $res1 = $query1->fetch(PDO::FETCH_ASSOC);
-    if($res1){
-        $nome_usu = $res1['nome'];
-    }
+    // Busca nome do usuário sem consulta por linha
+    $nome_usu = isset($usuariosMap[(string)$usuario]) ? $usuariosMap[(string)$usuario] : "";
 
     // Formatação dos campos
     $data_formatada = implode('/', array_reverse(explode('-', $data_mov)));

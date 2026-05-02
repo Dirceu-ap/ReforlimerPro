@@ -64,6 +64,12 @@ try {
     // campo de localidade (se existir na tabela)
     $local = isset($res['local']) ? $res['local'] : '';
 
+    // Sempre usa o lançamento informado na baixa; se vier vazio, mantém o lançamento da conta.
+    $saida_baixa = trim((string)$saida);
+    if ($saida_baixa === '') {
+        $saida_baixa = trim((string)$cp3);
+    }
+
     $stmt2 = $pdo->prepare("SELECT nome FROM fornecedores WHERE id = ? LIMIT 1");
     $stmt2->execute([$cp2]);
     $f = $stmt2->fetch(PDO::FETCH_ASSOC);
@@ -82,7 +88,7 @@ try {
             $juros_total += floatval($valor_acrescimo);
         }
         $stmtUpd = $pdo->prepare("UPDATE {$pagina} SET saida = ?, usuario_baixa = ?, status = 'Paga', juros = ?, multa = ?, desconto = ?, subtotal = ?, data_baixa = curDate() WHERE id = ?");
-        $stmtUpd->execute([$saida, $id_usuario, $juros_total, $valor_multa, $valor_desconto, $subtotal, $id]);
+        $stmtUpd->execute([$saida_baixa, $id_usuario, $juros_total, $valor_multa, $valor_desconto, $subtotal, $id]);
 
         // criar próxima conta se houver recorrência (mantido)
         $stmtFreq = $pdo->prepare("SELECT dias FROM frequencias WHERE nome = ? LIMIT 1");
@@ -130,7 +136,7 @@ try {
             $juros_total += floatval($valor_acrescimo);
         }
         $stmtUpd = $pdo->prepare("UPDATE {$pagina} SET saida = ?, usuario_baixa = ?, status = 'Pendente', juros = ?, multa = ?, desconto = ?, valor = ?, subtotal = ?, data_baixa = curDate() WHERE id = ?");
-        $stmtUpd->execute([$saida, $id_usuario, $juros_total, $valor_multa, $valor_desconto, $novo_valor, $subtotal, $id]);
+        $stmtUpd->execute([$saida_baixa, $id_usuario, $juros_total, $valor_multa, $valor_desconto, $novo_valor, $subtotal, $id]);
     }
 
     $camposOpcionais = [
@@ -150,7 +156,7 @@ try {
     }
 
     $insMov = $pdo->prepare("INSERT INTO movimentacoes (tipo, movimento, descricao, valor, usuario, data, lancamento, plano_conta, documento, caixa_periodo, id_mov, local) VALUES ('Saída', 'Conta à Pagar', ?, ?, ?, curDate(), ?, ?, ?, ?, ?, ?)");
-    $insMov->execute([$descricao_conta, $subtotal, $id_usuario, $saida, $cp5, $cp4, $caixa_aberto, $id_compra, $local]);
+    $insMov->execute([$descricao_conta, $subtotal, $id_usuario, $saida_baixa, $cp5, $cp4, $caixa_aberto, $id_compra, $local]);
 
     if ($id_compra) {
         $stmt4 = $pdo->prepare("SELECT status FROM {$pagina} WHERE id_compra = ?");

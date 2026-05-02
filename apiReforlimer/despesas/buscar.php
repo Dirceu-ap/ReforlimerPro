@@ -4,26 +4,31 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$buscar = '%' .@$_GET['buscar']. '%';
+$buscarTermo = trim((string)($_GET['buscar'] ?? ''));
+$buscar = '%' . $buscarTermo . '%';
 
-$query = $pdo->prepare("SELECT * from despesas where nome LIKE '$buscar' order by nome ASC");
+$query = $pdo->prepare("SELECT d.id, d.nome,
+                        (
+                            SELECT COUNT(*)
+                            FROM despesas d2
+                            WHERE d2.cat_despesa = d.id
+                        ) AS produtos
+                        FROM despesas d
+                        WHERE d.nome LIKE :buscar
+                        ORDER BY d.nome ASC");
+
+$query->bindValue(':buscar', $buscar, PDO::PARAM_STR);
 
 $query->execute();
 
 $res = $query->fetchAll(PDO::FETCH_ASSOC);
+$dados = array();
 
 for ($i=0; $i < count($res); $i++) { 
-    foreach ($res[$i] as $key => $value) {  }
-
-        $id = $res[$i]['id'];
-$query2 = $pdo->query("SELECT * from despesas where cat_despesa = '$id'");
-$res2 = $query2->fetchAll(PDO::FETCH_ASSOC);
-$total_produtos = @count($res2);
-
     $dados[] = array(
        'id' => $res[$i]['id'],
         'nome' => $res[$i]['nome'],
-        'produtos' => $total_produtos,
+        'produtos' => $res[$i]['produtos'],
     );
 }
 

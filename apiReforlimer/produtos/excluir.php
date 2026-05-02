@@ -4,7 +4,7 @@ include_once('../conexao.php');
 
 $postjson = json_decode(file_get_contents('php://input'), true);
 
-$id = @$_GET['id'];
+$id = $_GET['id'] ?? '';
 
 //BUSCAR A IMAGEM PARA EXCLUIR DA PASTA
 $query_con = $pdo->query("SELECT * FROM produtos WHERE id = '$id'");
