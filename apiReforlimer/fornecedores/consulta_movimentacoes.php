@@ -144,14 +144,14 @@ foreach ($fornecedores_res as $forn) {
     $tp = $stmtTP->fetch(PDO::FETCH_ASSOC);
     $total_pagar = floatval($tp['total']);
 
-    $stmtPago = $pdo->prepare("SELECT COALESCE(SUM(valor), 0) as total FROM contas_pagar WHERE cliente = :id AND UPPER(status) = 'PAGA'");
+    $stmtPago = $pdo->prepare("SELECT COALESCE(SUM(valor), 0) as total FROM contas_pagar WHERE cliente = :id AND status = 'Paga'");
     $stmtPago->bindValue(':id', $fid, PDO::PARAM_INT);
     $stmtPago->execute();
     $pg = $stmtPago->fetch(PDO::FETCH_ASSOC);
     $total_pago = floatval($pg['total']);
 
     // Só inclui fornecedores com algum movimento
-    if ($total_compras == 0 && $total_pagar == 0 && $busca === '') continue;
+    if ($total_compras === 0.0 && $total_pagar === 0.0 && $busca === '') continue;
 
     $dados[] = [
         'id'             => $fid,
