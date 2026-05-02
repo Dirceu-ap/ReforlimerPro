@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Platform,
   Image,
@@ -131,6 +131,8 @@ const NovaContaPagar: React.FC = () => {
   const [sucess, setSucess] = useState(false); // Exibe animação de sucesso
   const [edit, setEdit] = useState(false); // Define se está editando ou inserindo
   const [loading, setLoading] = useState(false); // Loading da tela
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   // Estados para imagem/anexo
   const [image, setImage] = useState<any>();
@@ -315,30 +317,34 @@ const NovaContaPagar: React.FC = () => {
 
   // Função para salvar os dados do formulário (inserir ou editar conta)
   async function saveData() {
-    const user = await AsyncStorage.getItem("@user");
-    const emissaoF = format(emissao, "yyyy-MM-dd");
-    const vencF = format(venc, "yyyy-MM-dd");
-
-    // Validação dos campos obrigatórios
-    if (valor == "") {
-      showMessage({
-        message: "Erro ao Salvar",
-        description: "Preencha o campo valor!",
-        type: "warning",
-      });
-      return;
-    }
-
-    if (forn == "" && descricao == "") {
-      showMessage({
-        message: "Erro ao Salvar",
-        description: "Selecione um Fornecedor ou Coloque uma descrição!",
-        type: "warning",
-      });
-      return;
-    }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setButtonDisabled(true);
 
     try {
+      const user = await AsyncStorage.getItem("@user");
+      const emissaoF = format(emissao, "yyyy-MM-dd");
+      const vencF = format(venc, "yyyy-MM-dd");
+
+      // Validação dos campos obrigatórios
+      if (valor == "") {
+        showMessage({
+          message: "Erro ao Salvar",
+          description: "Preencha o campo valor!",
+          type: "warning",
+        });
+        return;
+      }
+
+      if (forn == "" && descricao == "") {
+        showMessage({
+          message: "Erro ao Salvar",
+          description: "Selecione um Fornecedor ou Coloque uma descrição!",
+          type: "warning",
+        });
+        return;
+      }
+
       const norm = (v: string) =>
         String(v ?? "0")
           .replace(",", ".")
@@ -399,6 +405,9 @@ const NovaContaPagar: React.FC = () => {
     } catch (error) {
       Alert.alert("Ops", "Alguma coisa deu errado, tente novamente.");
       setSucess(false);
+    } finally {
+      setButtonDisabled(false);
+      savingRef.current = false;
     }
   }
 
@@ -834,6 +843,19 @@ const NovaContaPagar: React.FC = () => {
                         style={{ width: "100%" }}
                       />
                     )}
+                    <TouchableOpacity
+                      style={{
+                        marginTop: 10,
+                        alignSelf: "flex-end",
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
+                      }}
+                      onPress={() => setShow(false)}
+                    >
+                      <Text style={{ color: "#4CAF50", fontWeight: "600" }}>
+                        Fechar
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Modal>
@@ -916,6 +938,19 @@ const NovaContaPagar: React.FC = () => {
                         style={{ width: "100%" }}
                       />
                     )}
+                    <TouchableOpacity
+                      style={{
+                        marginTop: 10,
+                        alignSelf: "flex-end",
+                        paddingVertical: 8,
+                        paddingHorizontal: 12,
+                      }}
+                      onPress={() => setShow2(false)}
+                    >
+                      <Text style={{ color: "#4CAF50", fontWeight: "600" }}>
+                        Fechar
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </Modal>
@@ -1059,8 +1094,14 @@ const NovaContaPagar: React.FC = () => {
       </ScrollView>
 
       {/* Botão para salvar registro */}
-      <RectButton style={styles.Button} onPress={saveData}>
-        <Text style={styles.ButtonText}>Salvar Registro</Text>
+      <RectButton
+        style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
+        onPress={saveData}
+        enabled={!buttonDisabled}
+      >
+        <Text style={styles.ButtonText}>
+          {buttonDisabled ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
 
       {/* <NewPacientes /> */}

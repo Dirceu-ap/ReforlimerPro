@@ -74,6 +74,7 @@ interface Frequencia {
 
 // Mínimo de caracteres para disparar busca automática no campo de pesquisa
 const MIN_SEARCH_LENGTH = 3;
+const PAGAR_CACHE_TTL_MS = 60000;
 
 function Pagar() {
   const navigation: any = useNavigation();
@@ -121,6 +122,67 @@ function Pagar() {
   );
   const [isBaixandoLote, setIsBaixandoLote] = useState(false);
 
+  const parseNum = (value: string | number | undefined) => {
+    return parseFloat(String(value ?? "0").replace(",", ".")) || 0;
+  };
+
+  const getCacheKey = useCallback(
+    (date1: string, date2: string, forn?: string) => {
+      const filtro = String(forn ?? "")
+        .trim()
+        .toLowerCase();
+      return `@pagar_cache:${date1}:${date2}:${filtro}`;
+    },
+    [],
+  );
+
+  const readCache = useCallback(
+    async (
+      date1: string,
+      date2: string,
+      forn?: string,
+    ): Promise<Conta[] | null> => {
+      try {
+        const key = getCacheKey(date1, date2, forn);
+        const raw = await AsyncStorage.getItem(key);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        const updatedAt = Number(parsed?.updatedAt ?? 0);
+        const dados = parsed?.dados;
+        if (!updatedAt || !Array.isArray(dados)) return null;
+        if (Date.now() - updatedAt > PAGAR_CACHE_TTL_MS) return null;
+        return dados as Conta[];
+      } catch {
+        return null;
+      }
+    },
+    [getCacheKey],
+  );
+
+  const writeCache = useCallback(
+    async (
+      date1: string,
+      date2: string,
+      forn: string | undefined,
+      dados: Conta[],
+    ) => {
+      try {
+        const key = getCacheKey(date1, date2, forn);
+        await AsyncStorage.setItem(
+          key,
+          JSON.stringify({
+            updatedAt: Date.now(),
+            dados,
+          }),
+        );
+      } catch {
+        // sem ação
+      }
+    },
+    [getCacheKey],
+  );
+
   const logoUri = Image.resolveAssetSource(
     require("../../assets/logo2.png"),
   ).uri;
@@ -143,8 +205,8 @@ function Pagar() {
   // Função principal para buscar dados
   const fetchData = useCallback(
     async (fornecedorOverride?: string, showLoading: boolean = true) => {
+      let shouldHideLoadingInFinally = showLoading;
       try {
-        if (showLoading) setIsLoading(true);
         const date1 = format(date, "yyyy-MM-dd");
         const dates2 = format(date2, "yyyy-MM-dd");
 
@@ -154,6 +216,17 @@ function Pagar() {
           url += `&fornecedor=${encodeURIComponent(fornecedor)}`;
         }
 
+        if (showLoading) {
+          const cached = await readCache(date1, dates2, fornecedor);
+          if (cached && cached.length >= 0) {
+            setContas(cached);
+            setIsLoading(false);
+            shouldHideLoadingInFinally = false;
+          } else {
+            setIsLoading(true);
+          }
+        }
+
         const response = await api.get(url);
 
         if (
@@ -161,18 +234,23 @@ function Pagar() {
           response.data.resultado &&
           response.data.resultado !== "0"
         ) {
-          setContas(response.data.resultado);
+          const lista = Array.isArray(response.data.resultado)
+            ? (response.data.resultado as Conta[])
+            : [];
+          setContas(lista);
+          await writeCache(date1, dates2, fornecedor, lista);
         } else {
           setContas([]);
+          await writeCache(date1, dates2, fornecedor, []);
         }
       } catch (error) {
         console.log("Erro ao buscar dados:", error);
         setContas([]);
       } finally {
-        if (showLoading) setIsLoading(false);
+        if (shouldHideLoadingInFinally) setIsLoading(false);
       }
     },
-    [date, date2],
+    [date, date2, readCache, writeCache],
   );
 
   // Date picker handlers
@@ -559,17 +637,40 @@ function Pagar() {
               const user = await AsyncStorage.getItem("@user");
 
               for (const conta of itens) {
-                const valorNum =
-                  parseFloat(String(conta.valor).replace(",", ".")) || 0;
+                const toNum = (value: unknown) =>
+                  parseFloat(String(value ?? "0").replace(",", ".")) || 0;
+
+                const valorNum = toNum(conta.valor);
                 if (!valorNum || valorNum <= 0) continue;
+
+                const multaNum = 0;
+                const jurosNum = 0;
+                const descontoNum = toNum(conta.desconto);
+                const devolucaoNum = toNum(conta.devolucao);
+                const acrescimoNum = toNum(conta.acrescimo);
+                const subtotalCalculado =
+                  Math.round(
+                    (valorNum +
+                      multaNum +
+                      jurosNum +
+                      acrescimoNum -
+                      descontoNum -
+                      devolucaoNum) *
+                      100,
+                  ) / 100;
+                const subtotalNum = Math.max(subtotalCalculado, 0);
 
                 const payload = {
                   id: conta.id,
                   valor: valorNum,
-                  multa: 0,
-                  juros: 0,
-                  desconto: 0,
-                  subtotal: valorNum,
+                  multa: multaNum,
+                  juros: jurosNum,
+                  desconto: descontoNum,
+                  subtotal: subtotalNum,
+                  devolucao: devolucaoNum,
+                  desconto_perc: toNum(conta.desconto_perc),
+                  acrescimo: acrescimoNum,
+                  acrescimo_perc: toNum(conta.acrescimo_perc),
                   saida: conta.saida || "Caixa",
                   user: user || "default_user",
                 };
@@ -640,6 +741,28 @@ function Pagar() {
   const renderItem = useCallback(
     ({ item }: { item: Conta }) => {
       const valorFormatado = String(item.valor ?? "").replace(".", ",");
+      const valorNum = parseNum(item.valor);
+      const descontoNum = parseNum(item.desconto);
+      const devolucaoNum = parseNum(item.devolucao);
+      const acrescimoNum = parseNum(item.acrescimo);
+      const valorLiquidoNum = Math.max(
+        Math.round(
+          (valorNum + acrescimoNum - descontoNum - devolucaoNum) * 100,
+        ) / 100,
+        0,
+      );
+      const deltaLiquido = valorLiquidoNum - valorNum;
+      const mostrarValorLiquido =
+        Math.abs(valorLiquidoNum - valorNum) >= 0.01 || acrescimoNum > 0;
+      const valorLiquidoFormatado = valorLiquidoNum
+        .toFixed(2)
+        .replace(".", ",");
+      const estiloLiquido =
+        deltaLiquido < -0.009
+          ? styles.ValorLiquidoReducao
+          : deltaLiquido > 0.009
+            ? styles.ValorLiquidoAcrescimo
+            : styles.ValorLiquido;
       const data = item.vencimento ? parseISO(item.vencimento) : new Date();
       const vencimento = format(data, "dd/MM/yyyy");
 
@@ -759,6 +882,11 @@ function Pagar() {
                   <Text style={styles.ValorRes}>{item.valor_antigo}</Text>
                 )}
               </Text>
+              {mostrarValorLiquido && (
+                <Text style={styles.ValorLiquido}>
+                  Líquido: R$ {valorLiquidoFormatado}
+                </Text>
+              )}
 
               <View style={styles.Section}>
                 <MaterialIcons

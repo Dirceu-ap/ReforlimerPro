@@ -29,8 +29,10 @@ import * as SplashScreen from "expo-splash-screen";
 import Card from "../../components/CardMovimentacoes";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const logoUri = Image.resolveAssetSource(require("../../assets/logo2.png")).uri;
+const MOV_CACHE_TTL_MS = 60000;
 
 // Interfaces
 interface MovimentoItem {
@@ -95,6 +97,50 @@ const Movimento: React.FC = () => {
   const [includeContas, setIncludeContas] = useState<boolean>(false);
   const [relatorioTitulosPendentes, setRelatorioTitulosPendentes] =
     useState<boolean>(false);
+
+  const buildMovCacheKey = () => {
+    const d1 = format(date, "yyyy-MM-dd");
+    const d2 = format(date2, "yyyy-MM-dd");
+    const l = String(lanc ?? "")
+      .trim()
+      .toLowerCase();
+    const ic = includeContas ? "1" : "0";
+    return `@mov_cache:${d1}:${d2}:${l}:${ic}`;
+  };
+
+  const readMovCache = async (): Promise<MovimentoItem[] | null> => {
+    try {
+      const key = buildMovCacheKey();
+      const raw = await AsyncStorage.getItem(key);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw);
+      const updatedAt = Number(parsed?.updatedAt ?? 0);
+      const dados = parsed?.dados;
+
+      if (!updatedAt || !Array.isArray(dados)) return null;
+      if (Date.now() - updatedAt > MOV_CACHE_TTL_MS) return null;
+
+      return dados as MovimentoItem[];
+    } catch {
+      return null;
+    }
+  };
+
+  const writeMovCache = async (dados: MovimentoItem[]) => {
+    try {
+      const key = buildMovCacheKey();
+      await AsyncStorage.setItem(
+        key,
+        JSON.stringify({
+          updatedAt: Date.now(),
+          dados,
+        }),
+      );
+    } catch {
+      // sem ação
+    }
+  };
 
   // Efeito inicial
   useEffect(() => {
@@ -394,9 +440,23 @@ const Movimento: React.FC = () => {
   };
 
   // Buscar dados
-  const fetchData = async () => {
+  const fetchData = async (options?: { allowCache?: boolean }) => {
+    const allowCache = options?.allowCache !== false;
+    let cacheAplicado = false;
+
     try {
-      setIsLoading(true);
+      if (allowCache) {
+        const cached = await readMovCache();
+        if (cached) {
+          setLista(cached);
+          setIsLoading(false);
+          cacheAplicado = true;
+        } else {
+          setIsLoading(true);
+        }
+      } else {
+        setIsLoading(true);
+      }
 
       // Para a tela de Movimentações, sempre respeitar o período
       // selecionado (DE / ATÉ) e o tipo de lançamento.
@@ -416,12 +476,11 @@ const Movimento: React.FC = () => {
       const resp = await api.get(
         `mov/listar.php?data=${encodeURIComponent(
           dateStartFull,
-        )}&data1=${encodeURIComponent(dateEndFull)}&lanc=${encodeURIComponent(
-          lanc,
-        )}`,
+        )}&data1=${encodeURIComponent(
+          dateEndFull,
+        )}&lanc=${encodeURIComponent(lanc)}&include_sem_lanc=1`,
       );
       let resultsA = normalizeResultado(resp.data);
-      console.log("fetchData resultsA normalized:", resultsA.length);
 
       let finalResults = resultsA.slice();
 
@@ -431,14 +490,13 @@ const Movimento: React.FC = () => {
           const respB = await api.get(
             `mov/listar.php?data=${encodeURIComponent(
               dateStartFull,
-            )}&data1=${encodeURIComponent(dateEndFull)}`,
+            )}&data1=${encodeURIComponent(dateEndFull)}&include_sem_lanc=1`,
           );
           const resultsB = normalizeResultado(respB.data);
           const map = new Map<string, any>();
           resultsA.forEach((it: any) => map.set(String(it.id), it));
           resultsB.forEach((it: any) => map.set(String(it.id), it));
           finalResults = Array.from(map.values());
-          console.log("fetchData merged final length:", finalResults.length);
         } catch (err) {
           console.warn("fetchData fallback sem lanc falhou:", err);
         }
@@ -452,7 +510,6 @@ const Movimento: React.FC = () => {
           )}&data1=${encodeURIComponent(dateEndFull)}&status=Concluida`,
         );
         const vendasRaw = vendasResp?.data ?? null;
-        console.log("fetchData vendasResp.raw:", vendasRaw);
         const vendasArr =
           vendasRaw && Array.isArray(vendasRaw.resultado)
             ? vendasRaw.resultado
@@ -470,14 +527,6 @@ const Movimento: React.FC = () => {
           const d = new Date(str);
           return isNaN(d.getTime()) ? null : d;
         };
-
-        const isSameDay = (a: Date, b: Date) =>
-          a.getFullYear() === b.getFullYear() &&
-          a.getMonth() === b.getMonth() &&
-          a.getDate() === b.getDate();
-
-        // usar data selecionada (date) como referência
-        const selectedDay = new Date(format(date, "yyyy-MM-dd") + "T00:00:00");
 
         const vendasFiltradas = vendasArr.filter((v: any) => {
           const status = String(
@@ -562,14 +611,6 @@ const Movimento: React.FC = () => {
                 Number(a.id?.toString().replace(/\D/g, ""))
             );
           });
-          console.log(
-            "fetchData after merging vendas length:",
-            finalResults.length,
-          );
-        } else {
-          console.log(
-            "fetchData: nenhuma venda concluída com vencimento na data selecionada",
-          );
         }
       } catch (err) {
         console.warn("fetchData: erro ao buscar vendas concluídas:", err);
@@ -678,21 +719,26 @@ const Movimento: React.FC = () => {
       if (finalResults && finalResults.length > 0) {
         const processedData = processApiData(finalResults);
         setLista(processedData);
+        await writeMovCache(processedData);
       } else {
-        setLista([]);
-        showMessage({
-          message: "Sem Dados",
-          description: "Nenhum Registro Encontrado no Período!",
-          type: "warning",
-        });
+        if (!cacheAplicado) {
+          setLista([]);
+          showMessage({
+            message: "Sem Dados",
+            description: "Nenhum Registro Encontrado no Período!",
+            type: "warning",
+          });
+        }
       }
     } catch (error: any) {
       console.error("Erro ao buscar dados:", error);
-      showMessage({
-        message: "Erro",
-        description: error.message || "Falha ao carregar dados",
-        type: "danger",
-      });
+      if (!cacheAplicado) {
+        showMessage({
+          message: "Erro",
+          description: error.message || "Falha ao carregar dados",
+          type: "danger",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -723,7 +769,7 @@ const Movimento: React.FC = () => {
 
   // Atualizar quando parâmetros mudam
   useEffect(() => {
-    fetchData();
+    fetchData({ allowCache: true });
   }, [lanc, date, date2, includeContas]);
 
   // Date pickers

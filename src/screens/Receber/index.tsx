@@ -99,6 +99,8 @@ interface BeneficiarioRule {
   };
 }
 
+const RECEBER_CACHE_TTL_MS = 60000;
+
 function Receber() {
   const [abrirModal, setAbrirModal] = useState(false);
   const [abrirModalParc, setAbrirModalParc] = useState(false);
@@ -181,6 +183,63 @@ function Receber() {
 
   // campo de filtro visível (rápido) para garantir interface igual ao Pagar
   const [searchLocal, setSearchLocal] = useState<string>("");
+
+  const getCacheKey = useCallback(
+    (date1: string, date2: string, filtro?: string) => {
+      const q = String(filtro ?? "")
+        .trim()
+        .toLowerCase();
+      return `@receber_cache:${date1}:${date2}:${q}`;
+    },
+    [],
+  );
+
+  const readCache = useCallback(
+    async (
+      date1: string,
+      date2: string,
+      filtro?: string,
+    ): Promise<any[] | null> => {
+      try {
+        const key = getCacheKey(date1, date2, filtro);
+        const raw = await AsyncStorage.getItem(key);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+        const updatedAt = Number(parsed?.updatedAt ?? 0);
+        const dados = parsed?.dados;
+        if (!updatedAt || !Array.isArray(dados)) return null;
+        if (Date.now() - updatedAt > RECEBER_CACHE_TTL_MS) return null;
+        return dados;
+      } catch {
+        return null;
+      }
+    },
+    [getCacheKey],
+  );
+
+  const writeCache = useCallback(
+    async (
+      date1: string,
+      date2: string,
+      filtro: string | undefined,
+      dados: any[],
+    ) => {
+      try {
+        const key = getCacheKey(date1, date2, filtro);
+        await AsyncStorage.setItem(
+          key,
+          JSON.stringify({
+            updatedAt: Date.now(),
+            dados,
+          }),
+        );
+      } catch {
+        // sem ação
+      }
+    },
+    [getCacheKey],
+  );
 
   const logoUri = Image.resolveAssetSource(
     require("../../assets/logo2.png"),
@@ -375,8 +434,8 @@ function Receber() {
   const fetchData = useCallback(
     async (clienteParam?: string) => {
       const requestId = ++latestRequestRef.current;
+      let shouldHideLoadingInFinally = true;
       try {
-        setIsLoading(true);
         const date1 = format(date, "yyyy-MM-dd");
         const dates2 = format(date2, "yyyy-MM-dd");
 
@@ -385,6 +444,17 @@ function Receber() {
         const q = clienteToUse
           ? encodeURIComponent(String(clienteToUse).trim())
           : "";
+
+        const cached = await readCache(date1, dates2, clienteToUse);
+        if (cached) {
+          if (requestId === latestRequestRef.current) {
+            setContas(cached);
+            setIsLoading(false);
+          }
+          shouldHideLoadingInFinally = false;
+        } else {
+          setIsLoading(true);
+        }
 
         // Delega o filtro principal ao backend (parâmetro cliente),
         // retornando já somente o que bate com o texto.
@@ -398,6 +468,7 @@ function Receber() {
 
         if (requestId === latestRequestRef.current) {
           setContas(lista);
+          await writeCache(date1, dates2, clienteToUse, lista);
         }
         return lista;
       } catch (error) {
@@ -407,12 +478,15 @@ function Receber() {
         }
         return [];
       } finally {
-        if (requestId === latestRequestRef.current) {
+        if (
+          requestId === latestRequestRef.current &&
+          shouldHideLoadingInFinally
+        ) {
           setIsLoading(false);
         }
       }
     },
-    [date, date2, clienteFiltro],
+    [date, date2, clienteFiltro, readCache, writeCache],
   );
 
   const handleBaixarSelecionados = useCallback(async () => {
@@ -1402,6 +1476,14 @@ function Receber() {
           maximumFractionDigits: 2,
         });
 
+      const formatDateSafely = (raw: any, fallback = "-") => {
+        const text = String(raw ?? "").trim();
+        if (!text) return fallback;
+        const parsed = parseISO(text);
+        if (Number.isNaN(parsed.getTime())) return fallback;
+        return format(parsed, "dd/MM/yyyy");
+      };
+
       const normalizeRuleText = (value: string) =>
         String(value ?? "")
           .normalize("NFD")
@@ -1461,13 +1543,41 @@ function Receber() {
       const regrasAplicadas = titulosCalculados
         .map((titulo) => detectRuleForTitulo(titulo))
         .filter(Boolean) as BeneficiarioRule[];
+      const idsRegrasAplicadas = Array.from(
+        new Set(regrasAplicadas.map((r) => r.id).filter(Boolean)),
+      );
       const mesmaRegraParaTodos =
         regrasAplicadas.length === titulosCalculados.length &&
         regrasAplicadas.every((r) => r.id === regrasAplicadas[0]?.id);
 
+      const clientesSelecionadosUnicos = Array.from(
+        new Set(
+          titulosCalculados
+            .map((titulo) => normalizeRuleText(String(titulo?.cliente ?? "")))
+            .filter(Boolean),
+        ),
+      );
+      const todosTitulosMesmoCliente = clientesSelecionadosUnicos.length <= 1;
+      const possuiTituloOrcamentoObra = titulosCalculados.some((titulo) => {
+        const textoOrigem = normalizeRuleText(
+          `${String(titulo?.local ?? "")} ${String(titulo?.descricaoConta ?? "")} ${String(titulo?.plano ?? "")}`,
+        );
+        return (
+          textoOrigem.includes("orcamento") || textoOrigem.includes("obra")
+        );
+      });
+
       const regraPixSelecionada = mesmaRegraParaTodos
         ? regrasAplicadas[0]
         : null;
+      const maxDiasPosVencimentoRegra = Number(
+        regraPixSelecionada?.pix?.maxDiasPosVencimento,
+      );
+      const maxDiasPosVencimentoRegraNormalizado = Number.isFinite(
+        maxDiasPosVencimentoRegra,
+      )
+        ? Math.max(0, Math.min(365, Math.floor(maxDiasPosVencimentoRegra)))
+        : 0;
       const maxDiasPosVencimentoDigitado = parseMaxDiasPosVencimentoInput(
         maxDiasPosVencimentoEscolhido,
       );
@@ -1483,8 +1593,55 @@ function Receber() {
       }
       if (maxDiasPosVencimentoDigitado !== null) {
         maxDiasPosVencimentoAplicado = maxDiasPosVencimentoDigitado;
+      } else {
+        maxDiasPosVencimentoAplicado = maxDiasPosVencimentoRegraNormalizado;
       }
       maxDiasPosVencimentoExibir = maxDiasPosVencimentoAplicado;
+      const usarQrDinamico = maxDiasPosVencimentoAplicado >= 1;
+      const nomeBeneficiarioConfirmacao = String(
+        regraPixSelecionada?.beneficiary?.nome ??
+          beneficiario.nome ??
+          "Reforlimer",
+      ).trim();
+
+      const confirmarGeracaoPorModo = await new Promise<boolean>((resolve) => {
+        let resolvido = false;
+        const finalizar = (valor: boolean) => {
+          if (resolvido) return;
+          resolvido = true;
+          resolve(valor);
+        };
+
+        const tipoPix = usarQrDinamico ? "dinamico" : "estatico";
+        const detalhePrazo = usarQrDinamico
+          ? `Prazo apos vencimento: ${maxDiasPosVencimentoAplicado} dia(s).`
+          : "Prazo apos vencimento: 0 dia(s) (vazio equivale a 0 no modo estatico).";
+        const detalheBeneficiario = `Beneficiario: ${nomeBeneficiarioConfirmacao || "Reforlimer"}.`;
+
+        Alert.alert(
+          "Confirmar geracao PIX",
+          `Este boleto sera gerado como PIX ${tipoPix}.\n${detalhePrazo}\n${detalheBeneficiario}`,
+          [
+            {
+              text: "Cancelar",
+              style: "cancel",
+              onPress: () => finalizar(false),
+            },
+            {
+              text: "Gerar",
+              onPress: () => finalizar(true),
+            },
+          ],
+          {
+            cancelable: true,
+            onDismiss: () => finalizar(false),
+          },
+        );
+      });
+
+      if (!confirmarGeracaoPorModo) {
+        return;
+      }
 
       const dataPagamentoSemHora = parseISO(dataPagamentoYmd);
       const dataPagamentoBase = new Date(
@@ -1521,7 +1678,10 @@ function Receber() {
         0,
       );
 
-      if (diasAtrasoMaiorSelecionado > maxDiasPosVencimentoAplicado) {
+      if (
+        usarQrDinamico &&
+        diasAtrasoMaiorSelecionado > maxDiasPosVencimentoAplicado
+      ) {
         Alert.alert(
           "PIX vencido",
           `Nao e possivel gerar/atualizar o boleto PIX porque o prazo maximo de ${maxDiasPosVencimentoAplicado} dia(s) apos o vencimento foi excedido (atraso atual: ${diasAtrasoMaiorSelecionado} dia(s)).`,
@@ -1529,21 +1689,26 @@ function Receber() {
         return;
       }
 
-      const regraAplicadaId = regraPixSelecionada
-        ? String(regraPixSelecionada.id)
-        : "nenhuma";
+      const onlyDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
 
-      const idBeneficiarioDefault = String(beneficiario.id ?? "default");
-      const beneficiariosPorTitulo = titulosCalculados.map((titulo) => {
-        const regra = detectRuleForTitulo(titulo);
-        return String(
-          regra?.beneficiary?.id ?? regra?.id ?? idBeneficiarioDefault,
-        );
-      });
-      const idsBeneficiariosUnicos = Array.from(
-        new Set(beneficiariosPorTitulo),
-      );
-      if (idsBeneficiariosUnicos.length > 1) {
+      const normalizeBeneficiarySignature = (raw: BeneficiarioCobranca) => {
+        const documentoNorm = onlyDigits(String(raw?.documento ?? ""));
+        const pixNorm = String(raw?.pixChave ?? "")
+          .trim()
+          .toLowerCase();
+        const chaveRecebimento = pixNorm || documentoNorm;
+
+        if (chaveRecebimento) {
+          return chaveRecebimento;
+        }
+
+        // Fallback apenas quando PIX/documento nao vierem preenchidos.
+        return String(raw?.nome ?? "")
+          .trim()
+          .toLowerCase();
+      };
+
+      if (idsRegrasAplicadas.length > 1) {
         Alert.alert(
           "Selecao invalida",
           "Os titulos selecionados pertencem a beneficiarios diferentes. Gere o boleto PIX separadamente por beneficiario.",
@@ -1637,7 +1802,6 @@ function Receber() {
       jurosExibir = jurosExibirInicial;
       diasAtrasoExibir = diasAtrasoExibirInicial;
 
-      const onlyDigits = (s: string) => String(s ?? "").replace(/\D/g, "");
       const normalizePixKey = (
         pixKeyRaw: string,
         fallbackDocDigits: string,
@@ -1801,6 +1965,32 @@ function Receber() {
         String(beneficiarioEfetivo.documento ?? ""),
       );
       const chavePixExibicao = maskKeepLast4Digits(chavePixFinal);
+      const nomesPagadoresSelecionados = Array.from(
+        new Set(
+          titulosCalculados
+            .map((titulo) => String(titulo?.cliente ?? "").trim())
+            .filter(Boolean),
+        ),
+      );
+      const possuiPagadorUnico = nomesPagadoresSelecionados.length === 1;
+      const nomePagadorUnico = possuiPagadorUnico
+        ? nomesPagadoresSelecionados[0]
+        : "";
+      const tituloPagadorUnico = possuiPagadorUnico
+        ? titulosCalculados.find(
+            (titulo) =>
+              String(titulo?.cliente ?? "").trim() === nomePagadorUnico,
+          )
+        : null;
+      const pagadorNomeExibicao =
+        nomesPagadoresSelecionados.length === 0
+          ? forn || "Nao informado"
+          : possuiPagadorUnico
+            ? nomePagadorUnico
+            : "Varios pagadores";
+      const pagadorTelefoneExibicao = possuiPagadorUnico
+        ? tituloPagadorUnico?.tel || tel || "Nao informado"
+        : "Nao aplicavel";
 
       const merchantName = normalizeText(
         beneficiarioEfetivo.nome || "Reforlimer",
@@ -1828,7 +2018,7 @@ function Receber() {
       let qrCodeUrl = "";
       let origemCobranca = "LOCAL";
 
-      const usarPspNaCobranca = beneficiarioEfetivo.usePsp !== false;
+      const usarPspNaCobranca = usarQrDinamico;
 
       if (usarPspNaCobranca) {
         try {
@@ -1847,13 +2037,12 @@ function Receber() {
             jurosPercentDia: jurosPercentDiaAplicado,
             maxDiasPosVencimento: maxDiasPosVencimentoAplicado,
             pagadorNome:
-              titulosCalculados.length > 1
+              pagadorNomeExibicao === "Varios pagadores"
                 ? "Pagador diversos"
-                : titulosCalculados[0]?.cliente || forn || "Consumidor Final",
-            pagadorDocumento:
-              titulosCalculados.length > 1
-                ? ""
-                : String(titulosCalculados[0]?.doc ?? doc ?? ""),
+                : pagadorNomeExibicao || "Consumidor Final",
+            pagadorDocumento: !possuiPagadorUnico
+              ? ""
+              : String(tituloPagadorUnico?.doc ?? doc ?? ""),
             descricao:
               titulosCalculados.length > 1
                 ? `Cobranca ${titulosCalculados.length} titulos`
@@ -1906,8 +2095,6 @@ function Receber() {
         } catch (e: any) {
           const apiCode = String(e?.response?.data?.code ?? "").trim();
           const apiMsg = String(e?.response?.data?.message ?? "").trim();
-          // Fallback silencioso para QR local quando o PSP falhar.
-          // Mantem o fluxo de geracao sem exibir alertas tecnicos ao usuario.
           if (
             apiCode === "PIX_OVERDUE_LIMIT_EXCEEDED" ||
             (e?.response?.status === 422 &&
@@ -1928,9 +2115,25 @@ function Receber() {
             );
             return;
           }
+
+          Alert.alert(
+            "PIX dinâmico indisponível",
+            "Nao foi possivel gerar o QR Code dinamico no momento. Tente novamente em instantes.",
+          );
+          return;
         }
       } else {
-        // Regra local segue fluxo normal de geracao do QR local.
+        // Com prazo 0, a cobranca usa QR estatico/local.
+        // Antes de emitir o estatico, cancela cobrancas PIX dinamicas pendentes
+        // do mesmo titulo para evitar pagamento por QR antigo fora da regra atual.
+        try {
+          await api.post("receber/gerar_cobranca_pix.php", {
+            idConta: idContaRef,
+            cancelExistingPix: true,
+          });
+        } catch (_cancelPixError) {
+          // Fluxo local segue mesmo se a limpeza no PSP falhar.
+        }
       }
 
       if (!brCodePix) {
@@ -1986,21 +2189,12 @@ function Receber() {
                 <div class="txt">${beneficiarioEfetivo.nome}</div>
                 <div class="txt">${documentoExibicao}</div>
                 <div class="txt">${beneficiarioEfetivo.endereco}</div>
-                <div class="txt">Identificacao: ${String(beneficiarioEfetivo.id ?? "default").toUpperCase()}</div>
               </div>
 
               <div class="sec">
                 <div class="ttl">Pagador</div>
-                <div class="txt">${
-                  titulosCalculados.length > 1
-                    ? "Titulos selecionados (multiplos clientes)"
-                    : titulosCalculados[0]?.cliente || forn || "Nao informado"
-                }</div>
-                <div class="txt">Telefone: ${
-                  titulosCalculados.length > 1
-                    ? "Nao aplicavel"
-                    : titulosCalculados[0]?.tel || tel || "Nao informado"
-                }</div>
+                <div class="txt">${pagadorNomeExibicao}</div>
+                <div class="txt">Telefone: ${pagadorTelefoneExibicao}</div>
               </div>
 
               <table>
@@ -2023,12 +2217,7 @@ function Receber() {
                     <td>${
                       titulo.vencF
                         ? titulo.vencF
-                        : titulo.vencimento
-                          ? format(
-                              parseISO(String(titulo.vencimento)),
-                              "dd/MM/yyyy",
-                            )
-                          : "-"
+                        : formatDateSafely(titulo.vencimento)
                     }</td>
                     <td>${
                       String(titulo?.descricaoConta ?? "").trim() ||
@@ -2076,7 +2265,7 @@ function Receber() {
                     ? `No modo PSP, o banco aplica automaticamente os encargos ate ${maxDiasPosVencimentoExibir} dia(s) apos o vencimento.`
                     : "No modo local (beneficiario alternativo), o valor do QR e calculado nesta emissao conforme a data de pagamento informada."
                 }</div>
-                <div class="txt">Data considerada para juros: ${format(parseISO(dataPagamentoYmd), "dd/MM/yyyy")}</div>
+                <div class="txt">Data considerada para juros: ${formatDateSafely(dataPagamentoYmd, dataPagamentoYmd)}</div>
                 <div class="txt">Cidade recebedor: ${merchantCity}</div>
                 <div class="txt">TXID: ${txid}</div>
                 <div class="txt" style="word-break: break-all;">Copia e cola: ${brCodePix}</div>
@@ -2115,9 +2304,15 @@ function Receber() {
       if (idsSelecionados.length) {
         limparSelecaoMultipla();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log("Erro ao gerar boleto PIX:", error);
-      Alert.alert("Erro", "Nao foi possivel gerar o PDF de cobranca.");
+      const detalheErro =
+        String(error?.message ?? error?.response?.data?.message ?? "").trim() ||
+        "erro nao identificado";
+      Alert.alert(
+        "Erro",
+        `Nao foi possivel gerar o PDF de cobranca. Detalhe: ${detalheErro}`,
+      );
     } finally {
       setIsGerandoPixSelecionados(false);
     }

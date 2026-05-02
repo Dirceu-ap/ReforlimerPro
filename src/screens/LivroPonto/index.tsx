@@ -28,6 +28,7 @@ interface Lancamento {
   entrada: string;
   saida: string;
   totalHoras: string;
+  status?: string;
   observacao?: string;
   colaborador_id: string;
   colaborador_nome: string;
@@ -48,6 +49,27 @@ interface Colaborador {
   endereco?: string | null;
 }
 
+interface HoleriteLote {
+  periodo: string;
+  totalBruto: number;
+  desconto: number;
+  local: string;
+  lancamentos: Lancamento[];
+}
+
+interface InfoHolerite {
+  periodo: string;
+  total: number;
+  lotes: Array<{
+    local: string;
+    total: number;
+    lancamentos: Lancamento[];
+  }>;
+}
+
+const REGEX_ADIANTAMENTO_DIARIA =
+  /ADIANTAMENTO DI[ÁA]RIA:\s*R?\$?\s*([\d.,]+)/i;
+
 export default function LivroPonto() {
   const logoUri = Image.resolveAssetSource(
     require("../../assets/logo2.png"),
@@ -66,6 +88,8 @@ export default function LivroPonto() {
   const [filtroDataFim, setFiltroDataFim] = useState<Date | null>(null);
   const [showFiltroDataInicio, setShowFiltroDataInicio] = useState(false);
   const [showFiltroDataFim, setShowFiltroDataFim] = useState(false);
+  const [filtroStatusPendente, setFiltroStatusPendente] = useState(true);
+  const [filtroStatusPago, setFiltroStatusPago] = useState(false);
   const [tempFiltroDataInicio, setTempFiltroDataInicio] = useState<Date | null>(
     null,
   );
@@ -90,15 +114,10 @@ export default function LivroPonto() {
   const isFocused = useIsFocused();
   const [mostrarModalDesconto, setMostrarModalDesconto] = useState(false);
   const [valorDescontoTexto, setValorDescontoTexto] = useState("");
-  const [infoHolerite, setInfoHolerite] = useState<{
-    periodo: string;
-    total: number;
-  } | null>(null);
-  const [ultimoHolerite, setUltimoHolerite] = useState<{
-    periodo: string;
-    totalBruto: number;
-    desconto: number;
-  } | null>(null);
+  const [infoHolerite, setInfoHolerite] = useState<InfoHolerite | null>(null);
+  const [holeritesPreparados, setHoleritesPreparados] = useState<
+    HoleriteLote[]
+  >([]);
 
   const normalizarTexto = (texto: string) => {
     return texto
@@ -123,6 +142,81 @@ export default function LivroPonto() {
     const limpo = texto.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
     const n = parseFloat(limpo);
     return isNaN(n) ? 0 : n;
+  };
+
+  const extrairValorAdiantamentoLancamento = (lanc: Lancamento): number => {
+    if (!lanc?.observacao) return 0;
+    const match = lanc.observacao.match(REGEX_ADIANTAMENTO_DIARIA);
+    if (!match || !match[1]) return 0;
+    const valor = parseValorBR(match[1]);
+    return isFinite(valor) && valor > 0 ? valor : 0;
+  };
+
+  const obterLancamentosPendentesBase = () => {
+    return lancamentosFiltrados
+      .filter((l) => normalizarTexto(l.status || "Pendente") !== "pago")
+      .filter((l) =>
+        colaboradorFiltro && colaboradorFiltro !== "todos"
+          ? l.colaborador_id === colaboradorFiltro
+          : true,
+      );
+  };
+
+  const agruparLancamentosPorLocal = (lancs: Lancamento[]) => {
+    const mapa = new Map<
+      string,
+      { local: string; lancamentos: Lancamento[] }
+    >();
+
+    lancs.forEach((lanc) => {
+      const localOriginal = String(lanc.local || "").trim();
+      const localLabel = localOriginal || "Sem local";
+      const key = normalizarTexto(localLabel);
+
+      if (!mapa.has(key)) {
+        mapa.set(key, { local: localLabel, lancamentos: [] });
+      }
+
+      mapa.get(key)!.lancamentos.push(lanc);
+    });
+
+    return Array.from(mapa.values()).sort((a, b) =>
+      a.local.localeCompare(b.local, "pt-BR", { sensitivity: "base" }),
+    );
+  };
+
+  const distribuirDescontoProporcional = (
+    valores: number[],
+    descontoTotal: number,
+  ): number[] => {
+    if (descontoTotal <= 0 || valores.length === 0) {
+      return valores.map(() => 0);
+    }
+
+    const somaValores = valores.reduce(
+      (acc, n) => acc + (isFinite(n) ? n : 0),
+      0,
+    );
+    if (!isFinite(somaValores) || somaValores <= 0) {
+      return valores.map(() => 0);
+    }
+
+    const descontos = valores.map(
+      (valor) => (descontoTotal * valor) / somaValores,
+    );
+    let somaDescontos = descontos.reduce((acc, n) => acc + n, 0);
+
+    if (descontos.length > 0) {
+      const ajuste = descontoTotal - somaDescontos;
+      descontos[descontos.length - 1] += ajuste;
+      somaDescontos = descontos.reduce((acc, n) => acc + n, 0);
+
+      if (!isFinite(somaDescontos)) {
+        return valores.map(() => 0);
+      }
+    }
+
+    return descontos;
   };
 
   const carregarColaboradores = async () => {
@@ -217,6 +311,7 @@ export default function LivroPonto() {
             entrada: item.entrada,
             saida: item.saida,
             totalHoras: item.total_horas || "0h 0min",
+            status: item.status || "Pendente",
             observacao: item.observacao || "",
             colaborador_id: String(item.colaborador_id),
             colaborador_nome: item.colaborador_nome || "Sem nome",
@@ -530,6 +625,17 @@ export default function LivroPonto() {
       return true;
     })
     .filter((lanc) => {
+      const statusNormalizado = normalizarTexto(lanc.status || "Pendente");
+      const ehPago = statusNormalizado === "pago";
+      const ehPendente = !ehPago;
+
+      if (filtroStatusPendente && filtroStatusPago) return true;
+      if (filtroStatusPendente) return ehPendente;
+      if (filtroStatusPago) return ehPago;
+
+      return false;
+    })
+    .filter((lanc) => {
       // filtro por período (entre data início e data fim)
       if (!filtroDataInicio && !filtroDataFim) return true;
 
@@ -576,6 +682,11 @@ export default function LivroPonto() {
       if (dataCompare !== 0) return dataCompare;
       return (a.colaborador_nome || "").localeCompare(b.colaborador_nome || "");
     });
+
+  const lancamentosPendentesPagamento = lancamentosFiltrados.filter((lanc) => {
+    return normalizarTexto(lanc.status || "Pendente") !== "pago";
+  });
+  const modoExtratoPago = filtroStatusPago;
 
   const calcularTotalHoras = () => {
     let totalMinutos = 0;
@@ -883,11 +994,22 @@ export default function LivroPonto() {
     try {
       setLoading(true);
 
+      if (lancamentosFiltrados.length <= 0) {
+        Alert.alert(
+          "Aviso",
+          "Nenhum lançamento encontrado no filtro atual para impressão.",
+        );
+        return;
+      }
+
       // calcula o total com base nos mesmos lançamentos usados no relatório
-      const totalValorGeral = lancamentosFiltrados.reduce((acc, lanc) => {
-        const v = calcularValorNumericoDiariaLancamento(lanc as any);
-        return acc + (isFinite(v) && v > 0 ? v : 0);
-      }, 0);
+      const totalValorGeral = lancamentosPendentesPagamento.reduce(
+        (acc, lanc) => {
+          const v = calcularValorNumericoDiariaLancamento(lanc as any);
+          return acc + (isFinite(v) && v > 0 ? v : 0);
+        },
+        0,
+      );
 
       const periodoTexto = (() => {
         if (filtroDataInicio || filtroDataFim) {
@@ -926,6 +1048,22 @@ export default function LivroPonto() {
         Alert.alert("Sucesso", "Relatório gerado com sucesso!");
       }
 
+      if (modoExtratoPago) {
+        Alert.alert(
+          "Extrato gerado",
+          "Impressão liberada no modo de lançamentos pagos (extrato do colaborador).",
+        );
+        return;
+      }
+
+      if (totalValorGeral <= 0) {
+        Alert.alert(
+          "Aviso",
+          "Nenhum lançamento pendente encontrado no filtro atual para gerar pagamento.",
+        );
+        return;
+      }
+
       // depois de gerar o PDF, pergunta sobre o lançamento
       Alert.alert(
         "Lançar em Contas a Pagar",
@@ -946,7 +1084,7 @@ export default function LivroPonto() {
             text: "Sim",
             onPress: async () => {
               if (totalValorGeral <= 0) return;
-              await lancarContasPagar(periodoTexto, totalValorGeral);
+              await lancarContasPagar(periodoTexto);
             },
           },
         ],
@@ -1006,6 +1144,8 @@ export default function LivroPonto() {
     periodoTexto: string,
     totalBruto: number,
     desconto: number = 0,
+    lancamentosBase?: Lancamento[],
+    localHolerite?: string,
   ) => {
     try {
       if (!colaboradorFiltro || colaboradorFiltro === "todos") {
@@ -1054,9 +1194,11 @@ export default function LivroPonto() {
 
       const colaborador = colaboradores.find((c) => c.id === colaboradorFiltro);
 
-      const lancamentosColaborador = lancamentosFiltrados.filter(
-        (l) => l.colaborador_id === colaboradorFiltro,
-      );
+      const lancamentosColaborador = (
+        Array.isArray(lancamentosBase)
+          ? lancamentosBase
+          : obterLancamentosPendentesBase()
+      ).filter((l) => l.colaborador_id === colaboradorFiltro);
 
       if (lancamentosColaborador.length === 0) {
         Alert.alert(
@@ -1066,19 +1208,9 @@ export default function LivroPonto() {
         return;
       }
 
-      const regexAdiantamento = /ADIANTAMENTO DI[ÁA]RIA:\s*R?\$?\s*([\d.,]+)/i;
-
       let totalAdiantamentos = 0;
       lancamentosColaborador.forEach((lanc) => {
-        if (lanc.observacao) {
-          const match = lanc.observacao.match(regexAdiantamento);
-          if (match && match[1]) {
-            const v = parseValorBR(match[1]);
-            if (isFinite(v) && v > 0) {
-              totalAdiantamentos += v;
-            }
-          }
-        }
+        totalAdiantamentos += extrairValorAdiantamentoLancamento(lanc);
       });
 
       const totalProventosTexto = formatCurrencyBR(totalBruto);
@@ -1115,12 +1247,9 @@ export default function LivroPonto() {
 
           let valorDescontoDiaTexto = "0,00";
           if (obs) {
-            const match = obs.match(regexAdiantamento);
-            if (match && match[1]) {
-              const v = parseValorBR(match[1]);
-              if (isFinite(v) && v > 0) {
-                valorDescontoDiaTexto = formatCurrencyBR(v);
-              }
+            const v = extrairValorAdiantamentoLancamento(lanc);
+            if (isFinite(v) && v > 0) {
+              valorDescontoDiaTexto = formatCurrencyBR(v);
             }
           }
 
@@ -1245,6 +1374,11 @@ export default function LivroPonto() {
                   <div><span class="label">DIAS TRABALHADOS:</span> ${lancamentosColaborador.length}</div>
                 </div>
               </div>
+              ${
+                localHolerite
+                  ? `<div class="cabecalho-duas-colunas linha-colab"><div class="col-esq"><div><span class="label">LOCAL:</span> ${localHolerite}</div></div><div class="col-dir"></div></div>`
+                  : ""
+              }
             </div>
 
             <table>
@@ -1308,15 +1442,26 @@ export default function LivroPonto() {
 
     const desconto = parseValorBR(valorDescontoTexto);
 
-    // guarda os dados do holerite para o botão dedicado abrir depois
-    setUltimoHolerite({
-      periodo: infoHolerite.periodo,
-      totalBruto: infoHolerite.total,
+    const valoresLotes = infoHolerite.lotes.map((l) => l.total);
+    const descontosRateados = distribuirDescontoProporcional(
+      valoresLotes,
       desconto,
-    });
+    );
+
+    setHoleritesPreparados(
+      infoHolerite.lotes.map((lote, idx) => ({
+        periodo: infoHolerite.periodo,
+        totalBruto: lote.total,
+        desconto: descontosRateados[idx] || 0,
+        local: lote.local,
+        lancamentos: lote.lancamentos,
+      })),
+    );
 
     setMostrarModalDesconto(false);
     setInfoHolerite(null);
+
+    await marcarLivroPontoComoPago();
 
     Alert.alert(
       "Pronto",
@@ -1324,8 +1469,53 @@ export default function LivroPonto() {
     );
   };
 
+  const marcarLivroPontoComoPago = async () => {
+    try {
+      const periodoInicio = filtroDataInicio
+        ? format(filtroDataInicio, "yyyy-MM-dd")
+        : format(
+            new Date(mesAtual.getFullYear(), mesAtual.getMonth(), 1),
+            "yyyy-MM-dd",
+          );
+
+      const periodoFim = filtroDataFim
+        ? format(filtroDataFim, "yyyy-MM-dd")
+        : format(
+            new Date(mesAtual.getFullYear(), mesAtual.getMonth() + 1, 0),
+            "yyyy-MM-dd",
+          );
+
+      const payload: any = {
+        data_inicio: periodoInicio,
+        data_fim: periodoFim,
+      };
+
+      if (colaboradorFiltro && colaboradorFiltro !== "todos") {
+        payload.colaborador_id = colaboradorFiltro;
+      }
+
+      const res = await api.post("/livro-ponto/marcar_pago.php", payload);
+
+      if (!res.data?.success) {
+        const msg =
+          res.data?.message ||
+          "Holerite gerado, mas não foi possível marcar como pago no Livro Ponto.";
+        Alert.alert("Aviso", msg);
+        return;
+      }
+
+      carregarLancamentos();
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Holerite gerado, mas ocorreu erro ao marcar como pago no Livro Ponto.";
+      Alert.alert("Aviso", msg);
+    }
+  };
+
   const abrirHoleritePreparado = () => {
-    if (!ultimoHolerite) {
+    if (!holeritesPreparados.length) {
       Alert.alert(
         "Aviso",
         "Nenhum holerite preparado. Lance em contas a pagar e informe o desconto primeiro.",
@@ -1341,17 +1531,32 @@ export default function LivroPonto() {
       return;
     }
 
-    gerarHolerite(
-      ultimoHolerite.periodo,
-      ultimoHolerite.totalBruto,
-      ultimoHolerite.desconto,
+    Alert.alert(
+      "Gerar Holerite",
+      holeritesPreparados.length > 1
+        ? `Serão gerados ${holeritesPreparados.length} holerites, separados por local.`
+        : "Será gerado 1 holerite.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Gerar",
+          onPress: async () => {
+            for (const hol of holeritesPreparados) {
+              await gerarHolerite(
+                hol.periodo,
+                hol.totalBruto,
+                hol.desconto,
+                hol.lancamentos,
+                hol.local,
+              );
+            }
+          },
+        },
+      ],
     );
   };
 
-  const lancarContasPagar = async (
-    periodoTexto: string,
-    totalValor: number,
-  ) => {
+  const lancarContasPagar = async (periodoTexto: string) => {
     try {
       const userId = await AsyncStorage.getItem("@user");
       const hojeIso = format(new Date(), "yyyy-MM-dd");
@@ -1377,46 +1582,21 @@ export default function LivroPonto() {
         ? ` - Função: ${colabInfo.funcao}`
         : "";
 
-      // consolida os locais dos lançamentos usados para este período
-      const locaisPeriodo = Array.from(
-        new Set(
-          lancamentosFiltrados
-            .filter((l) =>
-              colaboradorFiltro && colaboradorFiltro !== "todos"
-                ? l.colaborador_id === colaboradorFiltro
-                : true,
-            )
-            .map((l) => (l.local || "").trim())
-            .filter((loc) => loc.length > 0),
-        ),
-      );
+      const lancamentosBase = obterLancamentosPendentesBase();
+      if (lancamentosBase.length <= 0) {
+        Alert.alert(
+          "Aviso",
+          "Nenhum lançamento pendente encontrado no filtro atual para gerar pagamento.",
+        );
+        return;
+      }
 
-      const localConta =
-        locaisPeriodo.length === 0
-          ? ""
-          : locaisPeriodo.length === 1
-            ? locaisPeriodo[0]
-            : locaisPeriodo.join(" / ");
+      const separarPorLocal =
+        !!colaboradorFiltro && colaboradorFiltro !== "todos";
 
-      // monta um resumo de horas por dia e observação para a descrição
-      const detalhesDias = lancamentosFiltrados
-        .filter((l) =>
-          colaboradorFiltro && colaboradorFiltro !== "todos"
-            ? l.colaborador_id === colaboradorFiltro
-            : true,
-        )
-        .map((l) => {
-          const dataTxt = format(l.data, "dd/MM");
-          const obs = l.observacao ? ` - ${l.observacao}` : "";
-          return `${dataTxt}: ${l.totalHoras}${obs}`;
-        })
-        .join(" | ");
-
-      const detalhesTexto =
-        detalhesDias.trim().length > 0 ? ` - Dias/Horas: ${detalhesDias}` : "";
-
-      // descrição começa com o nome do colaborador, para aparecer corretamente no Contas a Pagar
-      const descricao = `${colaboradorNome} - Livro Ponto (${periodoTexto})${docTexto}${funcaoTexto}${detalhesTexto}`;
+      const grupos = separarPorLocal
+        ? agruparLancamentosPorLocal(lancamentosBase)
+        : [{ local: "Geral", lancamentos: lancamentosBase }];
 
       // Busca uma combinação válida de plano + despesa para evitar
       // rejeição no backend quando a configuração do banco varia entre ambientes.
@@ -1489,44 +1669,114 @@ export default function LivroPonto() {
       ]);
       const despSelecionada = despPreferida || despesasDisponiveis[0];
 
-      const payload = {
-        id: "0",
-        valor: totalValor.toFixed(2),
-        descricao,
-        // Gravamos na coluna "cliente" o código do colaborador com prefixo C-
-        // (campo forn na API), não o nome.
-        forn: colaboradorCodigo,
-        saida: "Caixa",
-        doc:
-          colabInfo?.cpf && colaboradorNome
-            ? `${colaboradorNome} - CPF/CNPJ: ${colabInfo.cpf}`
-            : "Livro Ponto",
-        plano: planoSelecionado,
-        desp: despSelecionada,
-        freq: "Uma Vez",
-        emissao: hojeIso,
-        venc: filtroDataFim ? format(filtroDataFim, "yyyy-MM-dd") : hojeIso,
-        foto: "",
-        user: userId,
-        local: localConta,
-      };
+      const lotesSucesso: Array<{
+        local: string;
+        total: number;
+        lancamentos: Lancamento[];
+      }> = [];
 
-      const res = await api.post("/pagar/salvar.php", payload);
+      for (const grupo of grupos) {
+        const totalGrupo = grupo.lancamentos.reduce((acc, lanc) => {
+          const v = calcularValorNumericoDiariaLancamento(lanc);
+          return acc + (isFinite(v) && v > 0 ? v : 0);
+        }, 0);
 
-      if (!res.data?.sucesso) {
-        Alert.alert(
-          "Aviso",
-          res.data?.mensagem || "Não foi possível lançar em contas a pagar.",
+        const totalAdiantamentosGrupo = grupo.lancamentos.reduce(
+          (acc, lanc) => {
+            return acc + extrairValorAdiantamentoLancamento(lanc);
+          },
+          0,
         );
+
+        if (!isFinite(totalGrupo) || totalGrupo <= 0) {
+          continue;
+        }
+
+        const localTextoDescricao =
+          separarPorLocal && grupo.local ? ` - Local: ${grupo.local}` : "";
+
+        const periodoCurto = (() => {
+          if (filtroDataInicio || filtroDataFim) {
+            const iniTxt = filtroDataInicio
+              ? format(filtroDataInicio, "dd/MM/yyyy")
+              : "início";
+            const fimTxt = filtroDataFim
+              ? format(filtroDataFim, "dd/MM/yyyy")
+              : "fim";
+            return `${iniTxt} a ${fimTxt}`;
+          }
+          return format(mesAtual, "MM/yyyy");
+        })();
+
+        const descricao = `Livro Ponto - ${colaboradorNome}${localTextoDescricao} - Período: ${periodoCurto}${docTexto}${funcaoTexto}`;
+        const descricaoComAdiantamento =
+          totalAdiantamentosGrupo > 0
+            ? `${descricao} - Adiantamentos abatidos: R$ ${formatCurrencyBR(totalAdiantamentosGrupo)}`
+            : descricao;
+
+        const payload = {
+          id: "0",
+          // Mantém o valor bruto na conta e aplica adiantamento no campo de desconto,
+          // para o valor líquido sair correto na tela de baixa/comprovante.
+          valor: totalGrupo.toFixed(2),
+          descricao: descricaoComAdiantamento,
+          // Gravamos na coluna "cliente" o código do colaborador com prefixo C-
+          // (campo forn na API), não o nome.
+          forn: colaboradorCodigo,
+          saida: "Caixa",
+          doc:
+            colabInfo?.cpf && colaboradorNome
+              ? `${colaboradorNome} - CPF/CNPJ: ${colabInfo.cpf}`
+              : "Livro Ponto",
+          plano: planoSelecionado,
+          desp: despSelecionada,
+          freq: "Uma Vez",
+          emissao: hojeIso,
+          venc: filtroDataFim ? format(filtroDataFim, "yyyy-MM-dd") : hojeIso,
+          foto: "",
+          user: userId,
+          local:
+            grupo.local === "Sem local" || grupo.local === "Geral"
+              ? ""
+              : grupo.local,
+          desconto: totalAdiantamentosGrupo.toFixed(2),
+          desconto_perc: "0",
+          acrescimo: "0",
+          acrescimo_perc: "0",
+          devolucao: "0",
+        };
+
+        const res = await api.post("/pagar/salvar.php", payload);
+
+        if (res.data?.sucesso) {
+          lotesSucesso.push({
+            local: grupo.local,
+            total: totalGrupo,
+            lancamentos: grupo.lancamentos,
+          });
+        }
+      }
+
+      if (lotesSucesso.length <= 0) {
+        Alert.alert("Aviso", "Não foi possível lançar em contas a pagar.");
         return;
       }
-      setInfoHolerite({ periodo: periodoTexto, total: totalValor });
+
+      const totalLotes = lotesSucesso.reduce((acc, l) => acc + l.total, 0);
+
+      setInfoHolerite({
+        periodo: periodoTexto,
+        total: totalLotes,
+        lotes: lotesSucesso,
+      });
       setValorDescontoTexto("");
       setMostrarModalDesconto(true);
 
       Alert.alert(
         "Lançado",
-        "Lançamento criado em contas a pagar com sucesso!",
+        lotesSucesso.length > 1
+          ? "Lançamentos criados em contas a pagar separados por local!"
+          : "Lançamento criado em contas a pagar com sucesso!",
       );
     } catch (error: any) {
       const msg =
@@ -1588,11 +1838,17 @@ export default function LivroPonto() {
             onPress={imprimirRelatorio}
           >
             <Ionicons name="print" size={24} color="#fff" />
-            <Text style={styles.printButtonText}>Imprimir</Text>
+            <Text style={styles.printButtonText}>
+              {modoExtratoPago ? "Imprimir Extrato" : "Imprimir"}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.printButton, { marginLeft: 8 }]}
+            style={[
+              styles.printButton,
+              { marginLeft: 8, opacity: modoExtratoPago ? 0.45 : 1 },
+            ]}
             onPress={abrirHoleritePreparado}
+            disabled={modoExtratoPago}
           >
             <Ionicons name="document-text" size={24} color="#fff" />
             <Text style={styles.printButtonText}>Holerite</Text>
@@ -1750,6 +2006,37 @@ export default function LivroPonto() {
             </Text>
           </TouchableOpacity>
         )}
+
+        <Text style={[styles.filterTitle, { marginTop: 8 }]}>Status:</Text>
+        <View style={{ flexDirection: "row", gap: 18, marginTop: 2 }}>
+          <TouchableOpacity
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={() => setFiltroStatusPendente((prev) => !prev)}
+          >
+            <Ionicons
+              name={filtroStatusPendente ? "checkbox" : "square-outline"}
+              size={22}
+              color={filtroStatusPendente ? "#4CAF50" : "#777"}
+            />
+            <Text style={{ marginLeft: 6, color: "#333", fontSize: 14 }}>
+              Pendente
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{ flexDirection: "row", alignItems: "center" }}
+            onPress={() => setFiltroStatusPago((prev) => !prev)}
+          >
+            <Ionicons
+              name={filtroStatusPago ? "checkbox" : "square-outline"}
+              size={22}
+              color={filtroStatusPago ? "#4CAF50" : "#777"}
+            />
+            <Text style={{ marginLeft: 6, color: "#333", fontSize: 14 }}>
+              Pago
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -1769,6 +2056,36 @@ export default function LivroPonto() {
                     </Text>
                   </View>
                   <View style={styles.cardHeaderRight}>
+                    <View
+                      style={{
+                        backgroundColor:
+                          normalizarTexto(lancamento.status || "Pendente") ===
+                          "pago"
+                            ? "#e8f5e9"
+                            : "#fff3e0",
+                        borderRadius: 10,
+                        paddingHorizontal: 8,
+                        paddingVertical: 3,
+                        marginRight: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color:
+                            normalizarTexto(lancamento.status || "Pendente") ===
+                            "pago"
+                              ? "#2e7d32"
+                              : "#ef6c00",
+                        }}
+                      >
+                        {normalizarTexto(lancamento.status || "Pendente") ===
+                        "pago"
+                          ? "Pago"
+                          : "Pendente"}
+                      </Text>
+                    </View>
                     <Text style={styles.cardTotal}>
                       {lancamento.totalHoras}
                     </Text>
@@ -2014,8 +2331,10 @@ export default function LivroPonto() {
             </View>
 
             <View style={[styles.modalBody, { paddingBottom: 20 }]}>
-              <Text style={styles.label}>
-                Valor para abater do total (opcional)
+              <Text style={styles.label}>Desconto extra (opcional)</Text>
+              <Text style={{ fontSize: 12, color: "#555", marginBottom: 8 }}>
+                Adiantamentos informados no lançamento já são abatidos
+                automaticamente.
               </Text>
               <TextInput
                 style={styles.input}

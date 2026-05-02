@@ -50,6 +50,8 @@ const AuthRoutes = () => {
         tabBarHideOnKeyboard: false,
         tabBarLabelPosition: "below-icon",
         headerShown: false,
+        lazy: true,
+        freezeOnBlur: true,
 
         tabBarStyle: {
           height: 80,

@@ -13,7 +13,6 @@ export function NewPacientes() {
         autoPlay
         loop
         resizeMode="contain"
-        autoSize
         style={styles.animation}
       />
     </View>

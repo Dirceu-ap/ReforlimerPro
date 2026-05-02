@@ -74,7 +74,7 @@ const Estoque: React.FC = () => {
 
     console.warn(
       "parseResponseData: não foi possível extrair JSON. Conteúdo (trim):",
-      s.slice(0, 1000)
+      s.slice(0, 1000),
     );
     return {};
   };
@@ -97,10 +97,8 @@ const Estoque: React.FC = () => {
       }
 
       const response = await api.get(
-        `produtos/listar_estoque.php?pagina=${nextPage}&limite=${PAGE_LIMIT}`
+        `produtos/listar_estoque.php?pagina=${nextPage}&limite=${PAGE_LIMIT}`,
       );
-
-      console.log("listar_estoque response:", response?.data);
 
       const resp = parseResponseData(response?.data);
 
@@ -124,15 +122,15 @@ const Estoque: React.FC = () => {
       const resultados = Array.isArray(resp.resultado)
         ? resp.resultado
         : Array.isArray(resp.itens)
-        ? resp.itens
-        : [];
+          ? resp.itens
+          : [];
 
       const total = Number(
-        resp.totalItems ?? (nextPage === 1 ? resultados.length : totalItems)
+        resp.totalItems ?? (nextPage === 1 ? resultados.length : totalItems),
       );
 
       setLista((prev) =>
-        nextPage === 1 ? resultados : [...prev, ...resultados]
+        nextPage === 1 ? resultados : [...prev, ...resultados],
       );
       setTotalItems(isNaN(total) ? 0 : total);
       setPage(nextPage + 1);
@@ -164,9 +162,8 @@ const Estoque: React.FC = () => {
       }
 
       const response = await api.get(
-        `produtos/buscar_estoque.php?buscar=${encodeURIComponent(busca)}`
+        `produtos/buscar_estoque.php?buscar=${encodeURIComponent(busca)}`,
       );
-      console.log("buscar_estoque response:", response?.data);
       const resp = parseResponseData(response?.data);
 
       if (resp.success === false || resp.resultado === "0") {
@@ -184,10 +181,10 @@ const Estoque: React.FC = () => {
       const resultados = Array.isArray(resp.resultado)
         ? resp.resultado
         : Array.isArray(resp.itens)
-        ? resp.itens
-        : Array.isArray(resp)
-        ? resp
-        : [];
+          ? resp.itens
+          : Array.isArray(resp)
+            ? resp
+            : [];
 
       setLista(resultados);
       setTotalItems(Number(resp.totalItems ?? resultados.length));
@@ -225,8 +222,8 @@ const Estoque: React.FC = () => {
     Number.isFinite(totalItems) && totalItems > 0
       ? totalItems
       : Array.isArray(lista)
-      ? lista.length
-      : 0;
+        ? lista.length
+        : 0;
   const renderLowStockHeader = () => {
     if (!lowCount) return null;
     return (

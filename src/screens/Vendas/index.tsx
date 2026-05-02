@@ -102,8 +102,6 @@ const Venda: React.FC = () => {
           dataFim: brEnd,
         };
 
-        console.log("Vendas: buscando vendas com params (ISO):", paramsIso);
-
         const normalize = (data: any): any[] => {
           if (!data) return [];
           if (Array.isArray(data)) return data;
@@ -189,16 +187,6 @@ const Venda: React.FC = () => {
           items = all;
         }
 
-        // LOG: mostrar retorno bruto da API (listar.php) para depuração
-        try {
-          console.log(
-            "Vendas: resposta listar.php (raw):",
-            lastResponse?.data ?? null,
-          );
-        } catch (err) {
-          console.warn("Vendas: não foi possível logar resposta da API", err);
-        }
-
         // sempre aplicar filtro local final usando os campos retornados pela API
         // converte várias formas de data para número YYYYMMDD para comparação simples
         const toYmdNumber = (d: Date) =>
@@ -255,41 +243,6 @@ const Venda: React.FC = () => {
           return matched;
         });
 
-        if ((items || []).length > 0 && (finalItems || []).length === 0) {
-          // log detalhado para depuração quando o servidor retornou dados mas nada passou no filtro
-          console.warn(
-            "Vendas: items retornados mas nenhum passou no filtro local. amostra de datas (primeiros 10):",
-            (items || []).slice(0, 10).map((it: any) => {
-              const candidates = [
-                it.data_lanc,
-                it.data_lanc_iso,
-                it.data_lanc_br,
-                it.data_lanc_h,
-                it.data_pgto,
-                it.data_venc,
-                it.vencimento,
-                it.data,
-                it.created_at,
-              ];
-              return {
-                id: it.id,
-                rawDates: candidates,
-                parsed: candidates.map((c) => parseToYmd(c)),
-              };
-            }),
-          );
-        }
-
-        console.log(
-          "Vendas: filtro local YMD start,end:",
-          startYmd,
-          endYmd,
-          "itens antes:",
-          (items || []).length,
-          "itens depois:",
-          finalItems.length,
-        );
-
         setLista(finalItems || []);
 
         // calcular total mostrando corretamente valores com pontos/vírgulas
@@ -316,21 +269,6 @@ const Venda: React.FC = () => {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
           }),
-        );
-
-        console.log(
-          "Vendas: registros exibidos:",
-          (finalItems || []).length,
-          "servidor retornou (amostra):",
-          (items || [])
-            .slice(0, 6)
-            .map((it: any) => it.data_lanc ?? it.data ?? it.data_pgto),
-          "período:",
-          format(sDay, "yyyy-MM-dd"),
-          "->",
-          format(eDay, "yyyy-MM-dd"),
-          "usou filtro do servidor:",
-          usedServerFiltering,
         );
       } catch (err: any) {
         console.error("Vendas: erro ao buscar", err?.response?.data ?? err);

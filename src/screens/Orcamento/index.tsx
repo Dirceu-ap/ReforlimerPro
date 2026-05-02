@@ -84,15 +84,12 @@ function Orcamento() {
         ? "orcamentos_obra/listar.php"
         : "orcamento/listar.php";
       const relUrl = `${basePath}?data=${date1}&data1=${dates2}`;
-      console.log("[fetchData] GET ->", relUrl);
       const response = await api.get(relUrl);
-      console.log("[fetchData] response ->", response?.data);
 
       const raw = response?.data?.resultado ?? response?.data ?? [];
       const lista: Orcamento[] = Array.isArray(raw) ? raw : [];
       setTodosOrcamentos(lista);
     } catch (err: any) {
-      console.log("Erro fetchData:", err?.response ?? err?.message ?? err);
       setTodosOrcamentos([]);
       setOrcamentos([]);
     } finally {
@@ -274,7 +271,6 @@ function Orcamento() {
 
       Alert.alert("Sucesso", "Relatório gerado com sucesso!");
     } catch (error) {
-      console.log("[gerarRelatorioPDF] erro ->", error);
       Alert.alert("Erro", "Falha ao gerar relatório de orçamentos.");
     }
   }, [date, date2, modoObra, searchLocal, somenteAprovados]);
@@ -285,9 +281,7 @@ function Orcamento() {
       const relUrl = modoObra
         ? `orcamentos_obra/listar_id.php?id=${id}`
         : `orcamento/listar_id.php?id=${id}`;
-      console.log("[abrirDetalhes] GET ->", relUrl);
       const response = await api.get(relUrl);
-      console.log("[abrirDetalhes] response ->", response?.data);
       if (response.data?.dados) {
         setOrcamentoSelecionado(response.data.dados);
         setAbrirModal(true);
@@ -298,7 +292,6 @@ function Orcamento() {
         );
       }
     } catch (error: any) {
-      console.log("[abrirDetalhes] erro ->", error?.response ?? error);
       const errMsg = error?.response?.data
         ? typeof error.response.data === "object"
           ? JSON.stringify(error.response.data)
@@ -325,9 +318,7 @@ function Orcamento() {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("[excluirOrcamento] GET ->", url);
               const response = await api.get(url);
-              console.log("[excluirOrcamento] response ->", response?.data);
 
               // APIs diferentes usam "sucesso" (orcamento) e "success" (orcamentos_obra)
               const ok =
@@ -347,10 +338,6 @@ function Orcamento() {
                 );
                 await fetchData(); // atualiza a lista do backend
               } else {
-                console.log(
-                  "[excluirOrcamento] erro retorno ->",
-                  response?.data,
-                );
                 const msgErro =
                   response?.data?.mensagem ||
                   response?.data?.erro ||
@@ -358,7 +345,6 @@ function Orcamento() {
                 Alert.alert("Erro", msgErro);
               }
             } catch (error: any) {
-              console.log("[excluirOrcamento] erro ->", error);
               const detalhe =
                 error?.response?.data?.mensagem ||
                 error?.response?.data?.erro ||
@@ -531,7 +517,6 @@ function Orcamento() {
                     navigation.navigate("NovoOrcamento", { id_reg: item.id });
                   }
                 } catch (navErr) {
-                  console.log("[editar] navigation error:", navErr);
                   Alert.alert(
                     "Erro",
                     "Não foi possível abrir edição. Verifique as rotas.",

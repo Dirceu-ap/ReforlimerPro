@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
-  Linking,
   Image,
 } from "react-native";
 import * as Print from "expo-print";
@@ -26,6 +25,8 @@ import api from "../../services/api";
 import Header from "../../components/Header";
 import fonts from "../../styles/fonts";
 import { styles } from "./styles";
+
+const { Linking } = require("react-native");
 
 interface Cliente {
   id: string;

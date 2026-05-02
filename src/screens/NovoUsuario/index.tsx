@@ -155,11 +155,9 @@ const NovoUsuario: React.FC = (): JSX.Element | null => {
         style={[styles.Button, loading && { opacity: 0.5 }]}
         onPress={!loading ? saveData : undefined}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.ButtonText}>Salvar Registro</Text>
-        )}
+        <Text style={styles.ButtonText}>
+          {loading ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
     </View>
   );

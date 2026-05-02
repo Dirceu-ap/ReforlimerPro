@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   SafeAreaView,
@@ -30,40 +30,103 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [usu, setUsu] = React.useState("");
+  const loadingRef = useRef(false);
+  const lastLoadedAtRef = useRef(0);
 
-  async function listarDados() {
+  const HOME_REFRESH_INTERVAL_MS = 15000;
+  const HOME_CACHE_KEY = "@home_cards_cache";
+  const HOME_CACHE_TTL_MS = 60000;
+
+  async function carregarCacheHome() {
     try {
-      const response = await api.get("dashboard/ListAllCards.php");
+      const raw = await AsyncStorage.getItem(HOME_CACHE_KEY);
+      if (!raw) return false;
 
-      const base = response?.data ?? {};
+      const parsed = JSON.parse(raw);
+      const updatedAt = Number(parsed?.updatedAt ?? 0);
+      const cacheDados = parsed?.dados;
+
+      if (!cacheDados || !updatedAt) return false;
+
+      const expired = Date.now() - updatedAt > HOME_CACHE_TTL_MS;
+      if (expired) return false;
+
+      setDados(cacheDados);
+      setIsLoading(false);
+      lastLoadedAtRef.current = updatedAt;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function listarDados(options?: {
+    force?: boolean;
+    showLoader?: boolean;
+  }) {
+    const force = options?.force === true;
+    const showLoader = options?.showLoader === true;
+
+    if (loadingRef.current && !force) return;
+
+    const now = Date.now();
+    if (!force && now - lastLoadedAtRef.current < HOME_REFRESH_INTERVAL_MS) {
+      return;
+    }
+
+    loadingRef.current = true;
+    if (showLoader && !refreshing) {
+      setIsLoading(true);
+    }
+
+    try {
+      const [dashRes, estoqueRes] = await Promise.allSettled([
+        api.get("dashboard/ListAllCards.php"),
+        api.get("produtos/listar_estoque.php?pagina=1&limite=1000"),
+      ]);
+
+      const base =
+        dashRes.status === "fulfilled" && dashRes.value?.data
+          ? dashRes.value.data
+          : {};
 
       // tenta garantir que o número de produtos com estoque baixo
       // esteja sempre correto, mesmo que o backend não envie o campo
       let estoqueBaixo: number | undefined =
         typeof base.estoque_baixo === "number" ? base.estoque_baixo : undefined;
 
-      try {
-        const respEst = await api.get(
-          "produtos/listar_estoque.php?pagina=1&limite=1000",
-        );
-        const d = respEst?.data ?? {};
+      if (estoqueRes.status === "fulfilled") {
+        const d = estoqueRes.value?.data ?? {};
         const arr = Array.isArray(d.resultado)
           ? d.resultado
           : Array.isArray(d.itens)
             ? d.itens
             : [];
         estoqueBaixo = arr.length;
-      } catch {
-        // se der erro, mantém o valor vindo do dashboard (se houver)
       }
 
       setDados({
         ...base,
         estoque_baixo: estoqueBaixo ?? 0,
       });
+
+      const nowTs = Date.now();
+      lastLoadedAtRef.current = nowTs;
+
+      await AsyncStorage.setItem(
+        HOME_CACHE_KEY,
+        JSON.stringify({
+          updatedAt: nowTs,
+          dados: {
+            ...base,
+            estoque_baixo: estoqueBaixo ?? 0,
+          },
+        }),
+      );
     } catch (error) {
       console.log("Error");
     } finally {
+      loadingRef.current = false;
       setIsLoading(false);
       setRefreshing(false);
     }
@@ -101,18 +164,34 @@ export default function Home() {
   }
 
   useEffect(() => {
-    listarDados();
-    carregarUsuario();
+    let mounted = true;
+
+    (async () => {
+      carregarUsuario();
+      const temCacheValido = await carregarCacheHome();
+      if (!mounted) return;
+
+      if (temCacheValido) {
+        listarDados({ force: false, showLoader: false });
+      } else {
+        listarDados({ force: true, showLoader: true });
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    listarDados();
-    carregarUsuario();
+    if (isFocused) {
+      listarDados({ force: false, showLoader: false });
+    }
   }, [isFocused]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    listarDados();
+    listarDados({ force: true, showLoader: false });
   };
 
   const contasRecebidas = Number(dados?.contasRecebidas ?? 0);

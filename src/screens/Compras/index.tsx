@@ -85,8 +85,6 @@ const Compra: React.FC = () => {
         resultado = [];
       }
 
-      console.log("Resultado final para setLista (compras):", resultado);
-
       // aplica filtro de busca local/cliente/pagamento/lancamento, se houver texto
       if (busca && busca.trim() !== "") {
         const termo = busca.trim().toLowerCase();
@@ -105,12 +103,6 @@ const Compra: React.FC = () => {
         setLista(filtrado);
       } else {
         setLista(resultado);
-      }
-
-      if (resultado.length !== 0) {
-        Alert.alert("Sucesso", "Dados carregados com sucesso!");
-      } else {
-        Alert.alert("Aviso", "Nenhum registro encontrado.");
       }
     } catch (error) {
       console.log("Erro ao buscar dados da API:", error);

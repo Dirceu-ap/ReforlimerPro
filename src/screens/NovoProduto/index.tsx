@@ -678,8 +678,9 @@ const NovoProduto: React.FC = () => {
 
       {/* Botão para salvar registro */}
       <RectButton
-        style={styles.Button}
+        style={[styles.Button, loading && { opacity: 0.5 }]}
         onPress={async () => {
+          if (loading) return;
           setLoading(true);
           const result = await saveData();
           if (result === true) {
@@ -691,8 +692,11 @@ const NovoProduto: React.FC = () => {
           }
           setLoading(false);
         }}
+        enabled={!loading}
       >
-        <Text style={styles.ButtonText}>Salvar Registro</Text>
+        <Text style={styles.ButtonText}>
+          {loading ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
 
       {/* <NewPacientes /> */}

@@ -8,12 +8,13 @@ import {
   SafeAreaView,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/core";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -81,6 +82,12 @@ const STORAGE_KEY = "@lancamentos_custos_state_v3";
 const LOCAL_TODOS = "__todos_locais__";
 
 type GrupoCusto = "Custos fixos" | "Custos variaveis" | "Custo da obra";
+type MovimentoSortOption =
+  | "data_desc"
+  | "data_asc"
+  | "valor_desc"
+  | "valor_asc"
+  | "descricao_asc";
 
 const DESPESAS_CUSTO_FIXO = [
   "Folha de pagamento",
@@ -395,18 +402,18 @@ async function buscarDespesasComLancamentos(
   dataInicio: string,
   dataFim: string,
   planoNome?: string,
+  localSelecionado?: string,
 ): Promise<{ tokens: Set<string>; nomes: Set<string> }> {
   const tokens = new Set<string>();
   const nomes = new Set<string>();
   const planoFiltro = normalizeText(planoNome ?? "");
   const filtrarPorPlano = planoFiltro !== "";
 
-  const [pagarResponse, receberResponse, bancosResponse] = await Promise.all([
+  const [pagarResponse, receberResponse] = await Promise.all([
     api.get(`pagar/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`),
     api.get(
       `receber/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`,
     ),
-    api.get("mov/listar_lanc.php"),
   ]);
 
   const pendenciasPagar = Array.isArray(pagarResponse?.data?.resultado)
@@ -415,22 +422,13 @@ async function buscarDespesasComLancamentos(
   const pendenciasReceber = Array.isArray(receberResponse?.data?.resultado)
     ? receberResponse.data.resultado
     : [];
-  const bancos = Array.isArray(bancosResponse?.data?.resultado)
-    ? bancosResponse.data.resultado
-    : [];
 
-  const detalhesPagar = await Promise.allSettled(
-    pendenciasPagar.map((item: any) =>
-      api.get(
-        `pagar/listar_id.php?id=${encodeURIComponent(String(item?.id ?? ""))}`,
-      ),
-    ),
-  );
-
-  detalhesPagar.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-    const dados = result.value?.data?.dados;
-    const planoConta = String(dados?.plano ?? "").trim();
+  pendenciasPagar.forEach((dados: any) => {
+    const localRegistro = extrairLocal(dados, dados?.dados);
+    if (!localCombina(localRegistro, String(localSelecionado ?? ""))) {
+      return;
+    }
+    const planoConta = String(dados?.plano ?? dados?.plano_conta ?? "").trim();
     const descricao = String(dados?.descricao ?? "").trim();
     if (filtrarPorPlano && !planoCombina(planoConta, String(planoNome ?? ""))) {
       return;
@@ -450,18 +448,12 @@ async function buscarDespesasComLancamentos(
     });
   });
 
-  const detalhesReceber = await Promise.allSettled(
-    pendenciasReceber.map((item: any) =>
-      api.get(
-        `receber/listar_id.php?id=${encodeURIComponent(String(item?.id ?? ""))}`,
-      ),
-    ),
-  );
-
-  detalhesReceber.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-    const dados = result.value?.data?.dados;
-    const planoConta = String(dados?.plano ?? "").trim();
+  pendenciasReceber.forEach((dados: any) => {
+    const localRegistro = extrairLocal(dados, dados?.dados);
+    if (!localCombina(localRegistro, String(localSelecionado ?? ""))) {
+      return;
+    }
+    const planoConta = String(dados?.plano ?? dados?.plano_conta ?? "").trim();
     const descricao = String(dados?.descricao ?? "").trim();
     if (filtrarPorPlano && !planoCombina(planoConta, String(planoNome ?? ""))) {
       return;
@@ -478,48 +470,6 @@ async function buscarDespesasComLancamentos(
       tokens.add(normalizeText(nome));
       tokens.add(normalizeCompact(nome));
       nomes.add(nome);
-    });
-  });
-
-  const movimentosPorBanco = await Promise.allSettled(
-    bancos.map((item: any) =>
-      api.get(
-        `mov/listar.php?data=${dataInicio}&data1=${dataFim}&lanc=${encodeURIComponent(String(item?.nome ?? ""))}`,
-      ),
-    ),
-  );
-
-  movimentosPorBanco.forEach((result) => {
-    if (result.status !== "fulfilled") return;
-
-    const movimentos = Array.isArray(result.value?.data?.resultado)
-      ? result.value.data.resultado
-      : [];
-
-    movimentos.forEach((item: any) => {
-      const planoConta = String(item?.plano_conta ?? "").trim();
-      const descricao = String(item?.descricao ?? "").trim();
-      if (
-        filtrarPorPlano &&
-        !planoCombina(planoConta, String(planoNome ?? ""))
-      ) {
-        return;
-      }
-
-      const { left } = parsePlanoConta(planoConta);
-      if (left) {
-        tokens.add(normalizeText(left));
-        tokens.add(normalizeCompact(left));
-        nomes.add(left);
-      }
-
-      inferirCategoriasPorTexto(`${planoConta} ${descricao}`).forEach(
-        (nome) => {
-          tokens.add(normalizeText(nome));
-          tokens.add(normalizeCompact(nome));
-          nomes.add(nome);
-        },
-      );
     });
   });
 
@@ -532,6 +482,7 @@ async function buscarDespesasLancadasDireto(
 ): Promise<DespesaLancadaPeriodo[]> {
   const endpoints = [
     "lancamentos_custos/despesas_lancadas_periodo.php",
+    "lancamento_custos/despesas_lancadas_periodo.php",
     "despesas_lancadas_periodo.php",
   ];
 
@@ -576,6 +527,16 @@ function findFiltroByPlanoConta(
     normalizeText(item),
   );
   const textoBaseNorm = normalizeText(textoBase);
+
+  if (!filtros.length) {
+    const { left, right } = parsePlanoConta(planoConta);
+    const nomePlano = right || "Custo da obra";
+    const nomeDespesa = left || descricao || "Movimento";
+    return {
+      filtroLabel: `${nomePlano} / ${nomeDespesa}`,
+      planoConta: planoConta || `${nomeDespesa} - ${nomePlano}`,
+    };
+  }
 
   for (const item of filtros) {
     const planoNome = String(item.planoNome ?? "").trim();
@@ -657,12 +618,24 @@ function findFiltroByPlanoConta(
 
 function movimentoEhPagar(movimentoRaw: any): boolean {
   const mov = normalizeText(movimentoRaw);
-  return mov.includes("conta") && mov.includes("pagar");
+  if (!mov) return false;
+  if (/receb|entrada|receita/.test(mov)) return false;
+
+  return (
+    (mov.includes("conta") && mov.includes("pagar")) ||
+    /\bpagar\b|pagamento|\bsaida\b|despesa/.test(mov)
+  );
 }
 
 function movimentoEhReceber(movimentoRaw: any): boolean {
   const mov = normalizeText(movimentoRaw);
-  return mov.includes("conta") && mov.includes("receber");
+  if (!mov) return false;
+  if (/pagar|pagamento|saida|despesa/.test(mov)) return false;
+
+  return (
+    (mov.includes("conta") && mov.includes("receber")) ||
+    /receber|recebimento|\bentrada\b|receita/.test(mov)
+  );
 }
 
 function statusEhPendente(statusRaw: any): boolean {
@@ -672,8 +645,20 @@ function statusEhPendente(statusRaw: any): boolean {
 
 function extrairLocal(...itens: any[]): string {
   for (const item of itens) {
-    const local = String(item?.local ?? "").trim();
-    if (local) return local;
+    const candidatos = [
+      item?.local,
+      item?.local_nome,
+      item?.nome_local,
+      item?.obra,
+      item?.obra_nome,
+      item?.localidade,
+      item?.descricao,
+    ];
+
+    for (const candidato of candidatos) {
+      const local = String(candidato ?? "").trim();
+      if (local) return local;
+    }
   }
 
   return "";
@@ -685,7 +670,9 @@ function localCombina(localRaw: any, localSelecionado: string): boolean {
   const localRegistro = normalizeText(localRaw);
   const localFiltro = normalizeText(localSelecionado);
   if (!localFiltro) return true;
-  if (!localRegistro) return false;
+  // Alguns endpoints nao retornam local em todos os registros.
+  // Nesses casos, nao descarta o registro automaticamente.
+  if (!localRegistro) return true;
 
   return (
     localRegistro === localFiltro ||
@@ -711,6 +698,25 @@ function sortMovimentosDesc(itens: MovimentoResumo[]): MovimentoResumo[] {
   );
 }
 
+function movimentoDateTime(vencimentoRaw: string): number {
+  const text = String(vencimentoRaw ?? "").trim();
+  if (!text) return 0;
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+    const [dia, mes, ano] = text.split("/");
+    const ts = new Date(`${ano}-${mes}-${dia}T00:00:00`).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const ts = new Date(`${text}T00:00:00`).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  }
+
+  const ts = new Date(text).getTime();
+  return Number.isFinite(ts) ? ts : 0;
+}
+
 function aplicarGrupoCustoNosItens(
   itens: MovimentoResumo[],
 ): MovimentoResumo[] {
@@ -730,17 +736,25 @@ async function buscarResumoPorApisLegadas(
   dataFim: string,
   filtros: FiltroSelecionado[],
   localSelecionado: string,
+  planoSelecionado?: string,
 ): Promise<ResumoPeriodo> {
   const resumo = resumoVazio();
   const itens: MovimentoResumo[] = [];
 
-  const [pagarResponse, receberResponse, bancosResponse] = await Promise.all([
+  const [pagarResult, receberResult, bancosResult] = await Promise.allSettled([
     api.get(`pagar/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`),
     api.get(
       `receber/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`,
     ),
     api.get("mov/listar_lanc.php"),
   ]);
+
+  const pagarResponse =
+    pagarResult.status === "fulfilled" ? pagarResult.value : null;
+  const receberResponse =
+    receberResult.status === "fulfilled" ? receberResult.value : null;
+  const bancosResponse =
+    bancosResult.status === "fulfilled" ? bancosResult.value : null;
 
   const pendenciasPagar = Array.isArray(pagarResponse?.data?.resultado)
     ? pagarResponse.data.resultado
@@ -768,17 +782,20 @@ async function buscarResumoPorApisLegadas(
     if (!localCombina(localRegistro, localSelecionado)) return;
 
     const planoConta = String(dados?.plano ?? "").trim();
+    if (
+      String(planoSelecionado ?? "").trim() !== "" &&
+      !planoCombina(planoConta, String(planoSelecionado ?? ""))
+    ) {
+      return;
+    }
     const descricao = String(dados?.descricao ?? "").trim();
     const filtro = findFiltroByPlanoConta(planoConta, descricao, filtros);
     if (!filtro) return;
 
     const valor = parseAmount(dados?.subtotal ?? dados?.valor);
     const pendente = statusEhPendente(dados?.status);
-    if (pendente) {
-      resumo.aPagar += valor;
-    } else {
-      resumo.pago += valor;
-    }
+    if (!pendente) return;
+    resumo.aPagar += valor;
     itens.push({
       id: `pagar-pendente-${dados?.id ?? pendenciasPagar[index]?.id ?? index}`,
       fonte: "pagar",
@@ -823,17 +840,20 @@ async function buscarResumoPorApisLegadas(
     if (!localCombina(localRegistro, localSelecionado)) return;
 
     const planoConta = String(dados?.plano ?? "").trim();
+    if (
+      String(planoSelecionado ?? "").trim() !== "" &&
+      !planoCombina(planoConta, String(planoSelecionado ?? ""))
+    ) {
+      return;
+    }
     const descricao = String(dados?.descricao ?? "").trim();
     const filtro = findFiltroByPlanoConta(planoConta, descricao, filtros);
     if (!filtro) return;
 
     const valor = parseAmount(dados?.subtotal ?? dados?.valor);
     const pendente = statusEhPendente(dados?.status);
-    if (pendente) {
-      resumo.aReceber += valor;
-    } else {
-      resumo.recebido += valor;
-    }
+    if (!pendente) return;
+    resumo.aReceber += valor;
     itens.push({
       id: `receber-pendente-${dados?.id ?? pendenciasReceber[index]?.id ?? index}`,
       fonte: "receber",
@@ -882,6 +902,12 @@ async function buscarResumoPorApisLegadas(
       if (!localCombina(localRegistro, localSelecionado)) return;
 
       const planoConta = String(item?.plano_conta ?? "").trim();
+      if (
+        String(planoSelecionado ?? "").trim() !== "" &&
+        !planoCombina(planoConta, String(planoSelecionado ?? ""))
+      ) {
+        return;
+      }
       const descricao = String(item?.descricao ?? "").trim();
       const filtro = findFiltroByPlanoConta(planoConta, descricao, filtros);
       if (!filtro) return;
@@ -955,6 +981,18 @@ function buscarFiltroPorTexto(
     normalizeText(item),
   );
 
+  if (!filtros.length) {
+    const planoConta = String(planoContaRaw ?? "").trim();
+    const descricao = String(descricaoRaw ?? "").trim();
+    const { left, right } = parsePlanoConta(planoConta);
+    const nomePlano = right || "Custo da obra";
+    const nomeDespesa = left || descricao || "Movimento";
+    return {
+      filtroLabel: `${nomePlano} / ${nomeDespesa}`,
+      planoConta: planoConta || `${nomeDespesa} - ${nomePlano}`,
+    };
+  }
+
   for (const item of filtros) {
     const despesaNome = String(item.despesaNome ?? "").trim();
     const despesaNorm = normalizeText(despesaNome);
@@ -985,17 +1023,25 @@ async function buscarResumoPorDescricaoAproximada(
   dataFim: string,
   filtros: FiltroSelecionado[],
   localSelecionado: string,
+  planoSelecionado?: string,
 ): Promise<ResumoPeriodo> {
   const resumo = resumoVazio();
   const itens: MovimentoResumo[] = [];
 
-  const [pagarResponse, receberResponse, bancosResponse] = await Promise.all([
+  const [pagarResult, receberResult, bancosResult] = await Promise.allSettled([
     api.get(`pagar/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`),
     api.get(
       `receber/listar.php?data=${dataInicio}&data1=${dataFim}&status=all`,
     ),
     api.get("mov/listar_lanc.php"),
   ]);
+
+  const pagarResponse =
+    pagarResult.status === "fulfilled" ? pagarResult.value : null;
+  const receberResponse =
+    receberResult.status === "fulfilled" ? receberResult.value : null;
+  const bancosResponse =
+    bancosResult.status === "fulfilled" ? bancosResult.value : null;
 
   const pendenciasPagar = Array.isArray(pagarResponse?.data?.resultado)
     ? pagarResponse.data.resultado
@@ -1022,17 +1068,20 @@ async function buscarResumoPorDescricaoAproximada(
     if (!localCombina(localRegistro, localSelecionado)) return;
 
     const planoConta = String(dados?.plano ?? "").trim();
+    if (
+      String(planoSelecionado ?? "").trim() !== "" &&
+      !planoCombina(planoConta, String(planoSelecionado ?? ""))
+    ) {
+      return;
+    }
     const descricao = String(dados?.descricao ?? "").trim();
     const filtro = buscarFiltroPorTexto(planoConta, descricao, filtros);
     if (!filtro) return;
 
     const valor = parseAmount(dados?.subtotal ?? dados?.valor);
     const pendente = statusEhPendente(dados?.status);
-    if (pendente) {
-      resumo.aPagar += valor;
-    } else {
-      resumo.pago += valor;
-    }
+    if (!pendente) return;
+    resumo.aPagar += valor;
     itens.push({
       id: `pagar-aprox-${dados?.id ?? pendenciasPagar[index]?.id ?? index}`,
       fonte: "pagar",
@@ -1072,17 +1121,20 @@ async function buscarResumoPorDescricaoAproximada(
     if (!localCombina(localRegistro, localSelecionado)) return;
 
     const planoConta = String(dados?.plano ?? "").trim();
+    if (
+      String(planoSelecionado ?? "").trim() !== "" &&
+      !planoCombina(planoConta, String(planoSelecionado ?? ""))
+    ) {
+      return;
+    }
     const descricao = String(dados?.descricao ?? "").trim();
     const filtro = buscarFiltroPorTexto(planoConta, descricao, filtros);
     if (!filtro) return;
 
     const valor = parseAmount(dados?.subtotal ?? dados?.valor);
     const pendente = statusEhPendente(dados?.status);
-    if (pendente) {
-      resumo.aReceber += valor;
-    } else {
-      resumo.recebido += valor;
-    }
+    if (!pendente) return;
+    resumo.aReceber += valor;
     itens.push({
       id: `receber-aprox-${dados?.id ?? pendenciasReceber[index]?.id ?? index}`,
       fonte: "receber",
@@ -1126,6 +1178,12 @@ async function buscarResumoPorDescricaoAproximada(
       if (!localCombina(localRegistro, localSelecionado)) return;
 
       const planoConta = String(item?.plano_conta ?? "").trim();
+      if (
+        String(planoSelecionado ?? "").trim() !== "" &&
+        !planoCombina(planoConta, String(planoSelecionado ?? ""))
+      ) {
+        return;
+      }
       const descricao = String(item?.descricao ?? "").trim();
       const filtro = buscarFiltroPorTexto(planoConta, descricao, filtros);
       if (!filtro) return;
@@ -1210,6 +1268,17 @@ export default function LancamentosCustos() {
   const [locaisDisponiveis, setLocaisDisponiveis] = useState<string[]>([]);
   const [localSelecionado, setLocalSelecionado] = useState<string>(LOCAL_TODOS);
   const [loadingLocais, setLoadingLocais] = useState(false);
+  const [buscaMovimentos, setBuscaMovimentos] = useState("");
+  const [ordemMovimentos, setOrdemMovimentos] =
+    useState<MovimentoSortOption>("data_desc");
+  const [modoCompacto, setModoCompacto] = useState(false);
+  const [gruposExpandidos, setGruposExpandidos] = useState<
+    Record<GrupoCusto, boolean>
+  >({
+    "Custos fixos": true,
+    "Custos variaveis": true,
+    "Custo da obra": true,
+  });
 
   useEffect(() => {
     async function restoreSavedState() {
@@ -1496,7 +1565,7 @@ export default function LancamentosCustos() {
           setListaDespesas(despesasFinal);
           setDespesaSelecionada((prev) => {
             const existe = despesasFinal.some((item) => item.id === prev);
-            return existe ? prev : (despesasFinal[0]?.id ?? "");
+            return existe ? prev : "";
           });
           setStatusDespesas(
             `Mostrando ${despesasFinal.length} despesa(s) com lancamentos no periodo.`,
@@ -1510,12 +1579,14 @@ export default function LancamentosCustos() {
             dataInicioFormatada,
             dataFimFormatada,
             categoriaSelecionadaObj.nome,
+            localSelecionado,
           );
 
         const globalLancados = await buscarDespesasComLancamentos(
           dataInicioFormatada,
           dataFimFormatada,
           "",
+          localSelecionado,
         );
 
         const usouFallbackGlobal = nomesLancados.size === 0;
@@ -1565,7 +1636,7 @@ export default function LancamentosCustos() {
         setListaDespesas(despesasFinal);
         setDespesaSelecionada((prev) => {
           const existe = despesasFinal.some((item) => item.id === prev);
-          return existe ? prev : (despesasFinal[0]?.id ?? "");
+          return existe ? prev : "";
         });
 
         if (despesasFinal.length > 0 && !usouFallbackGlobal) {
@@ -1580,7 +1651,6 @@ export default function LancamentosCustos() {
         setTermosDetectados(termosFinal);
       } catch (error) {
         console.log("Erro ao carregar despesas", error);
-        setListaDespesas([]);
         setStatusDespesas("Falha ao consultar despesas com lancamentos.");
         setTermosDetectados([]);
       } finally {
@@ -1589,7 +1659,7 @@ export default function LancamentosCustos() {
     }
 
     carregarDespesas();
-  }, [categoriaSelecionadaObj, dataInicio, dataFim]);
+  }, [categoriaSelecionadaObj, dataInicio, dataFim, localSelecionado]);
 
   const despesaSelecionadaObj = useMemo(
     () => listaDespesas.find((item) => item.id === despesaSelecionada),
@@ -1646,133 +1716,491 @@ export default function LancamentosCustos() {
 
       const dataInicioFormatada = format(dataInicio, "yyyy-MM-dd");
       const dataFimFormatada = format(dataFim, "yyyy-MM-dd");
+      const planoSelecionado = String(
+        categoriaSelecionadaObj?.nome ?? "",
+      ).trim();
+      const filtroLocal =
+        localSelecionado === LOCAL_TODOS ? "" : String(localSelecionado);
 
-      let filtrosParaBusca = filtrosSelecionados;
-      let gerouFiltrosAutomaticos = false;
-
-      if (filtrosParaBusca.length === 0) {
-        const lancamentosPeriodo = await buscarDespesasComLancamentos(
-          dataInicioFormatada,
-          dataFimFormatada,
-          "",
+      const filtrosAtivos = filtrosSelecionados.filter((item) => {
+        if (!planoSelecionado) return true;
+        return (
+          normalizeText(item?.planoNome ?? "") ===
+          normalizeText(planoSelecionado)
         );
-        filtrosParaBusca = montarFiltrosAutomaticosPorNomes(
-          lancamentosPeriodo.nomes,
-        );
+      });
+      // Quando o usuario escolhe um local especifico, prioriza carregar
+      // movimentos desse local sem restringir por despesa persistida.
+      const aplicarFiltroDespesa =
+        filtrosAtivos.length > 0 && !!despesaSelecionadaObj && !filtroLocal;
+      const termosDespesaSelecionada = filtrosAtivos
+        .map((item) => normalizeText(item?.despesaNome ?? ""))
+        .filter((item) => !!item);
 
-        if (filtrosParaBusca.length > 0) {
-          gerouFiltrosAutomaticos = true;
-          setFiltrosSelecionados(filtrosParaBusca);
-        }
-      }
+      const registroCombinaDespesa = (
+        planoContaRaw: any,
+        descricaoRaw: any,
+      ) => {
+        if (!aplicarFiltroDespesa || !termosDespesaSelecionada.length)
+          return true;
 
-      if (filtrosParaBusca.length === 0) {
-        Alert.alert(
-          "Atencao",
-          "Nao foi possivel detectar despesas no periodo para classificar automaticamente.",
-        );
-        setStatusBusca(
-          "Nenhuma despesa detectada para classificacao automatica.",
-        );
-        return;
-      }
+        const planoConta = String(planoContaRaw ?? "").trim();
+        const descricao = String(descricaoRaw ?? "").trim();
+        const baseNorm = normalizeText(`${planoConta} ${descricao}`);
+        const categoriasNorm = inferirCategoriasPorTexto(
+          `${planoConta} ${descricao}`,
+        ).map((item) => normalizeText(item));
 
-      const payload = {
-        dataInicio: dataInicioFormatada,
-        dataFim: dataFimFormatada,
-        filtros: filtrosParaBusca,
-        local: localSelecionado === LOCAL_TODOS ? "" : String(localSelecionado),
+        return termosDespesaSelecionada.some((termo) => {
+          if (!termo) return false;
+          if (baseNorm.includes(termo) || termo.includes(baseNorm)) return true;
+          return categoriasNorm.some(
+            (cat) => cat.includes(termo) || termo.includes(cat),
+          );
+        });
       };
 
-      const endpoints = [
-        "lancamentos_custos/resumo_periodo.php",
-        "resumo_periodo.php",
-      ];
+      const dataReferenciaRealizacao = (dados: any, base: any) =>
+        String(
+          dados?.dataBaixaF ??
+            dados?.data_baixa ??
+            base?.dataBaixaF ??
+            base?.data_baixa ??
+            dados?.vencF ??
+            dados?.vencimento ??
+            base?.vencimento ??
+            "",
+        );
 
-      let resumoApi: ResumoPeriodo | null = null;
+      const paramsBase = `data=${dataInicioFormatada}&data1=${dataFimFormatada}&status=all`;
 
-      for (const endpoint of endpoints) {
-        try {
-          const response = await api.post(endpoint, payload);
+      const [pagarRes, receberRes, bancosRes] = await Promise.allSettled([
+        api.get(`pagar/listar.php?${paramsBase}`),
+        api.get(`receber/listar.php?${paramsBase}`),
+        api.get("mov/listar_lanc.php"),
+      ]);
 
-          if (response?.data?.success) {
-            resumoApi = {
-              aPagar: Number(response.data.aPagar ?? 0),
-              pago: Number(response.data.pago ?? 0),
-              aReceber: Number(response.data.aReceber ?? 0),
-              recebido: Number(response.data.recebido ?? 0),
-              resultadoProjetado: Number(response.data.resultadoProjetado ?? 0),
-              itens: Array.isArray(response.data.itens)
-                ? sortMovimentosDesc(
-                    aplicarGrupoCustoNosItens(
-                      response.data.itens.map((item: any) => ({
-                        ...item,
-                        grupoCusto: classificarGrupoCusto(
-                          item?.filtroLabel,
-                          item?.planoConta,
-                          item?.descricao,
-                        ),
-                      })),
-                    ),
-                  )
-                : [],
-            };
-            break;
-          }
-        } catch {
-          // tenta o proximo endpoint
+      const pagarListaBruta =
+        pagarRes.status === "fulfilled" &&
+        Array.isArray(pagarRes.value?.data?.resultado)
+          ? pagarRes.value.data.resultado
+          : [];
+      const receberListaBruta =
+        receberRes.status === "fulfilled" &&
+        Array.isArray(receberRes.value?.data?.resultado)
+          ? receberRes.value.data.resultado
+          : [];
+
+      // Nao filtra por local nesta etapa: alguns ambientes so retornam local
+      // completo no endpoint de detalhe (listar_id).
+      const pagarLista = pagarListaBruta;
+      const receberLista = receberListaBruta;
+      const bancos =
+        bancosRes.status === "fulfilled" &&
+        Array.isArray(bancosRes.value?.data?.resultado)
+          ? bancosRes.value.data.resultado
+          : [];
+
+      const resumoNovo = resumoVazio();
+      const itens: MovimentoResumo[] = [];
+      const diagnostico = {
+        detalhesPagarTotal: 0,
+        detalhesPagarLocal: 0,
+        detalhesPagarDespesa: 0,
+        detalhesPagarPendente: 0,
+        detalhesPagarRealizadoFallback: 0,
+        detalhesReceberTotal: 0,
+        detalhesReceberLocal: 0,
+        detalhesReceberDespesa: 0,
+        detalhesReceberPendente: 0,
+        detalhesReceberRealizadoFallback: 0,
+        movTotal: 0,
+        movLocal: 0,
+        movDespesa: 0,
+        movReconhecido: 0,
+      };
+      const realizadosFallbackPagar: MovimentoResumo[] = [];
+      const realizadosFallbackReceber: MovimentoResumo[] = [];
+      const recebimentosParciaisPendentes: MovimentoResumo[] = [];
+
+      const resolverFiltro = (planoContaRaw: any, descricaoRaw: any) => {
+        const planoConta = String(planoContaRaw ?? "").trim();
+        const descricao = String(descricaoRaw ?? "").trim();
+
+        if (filtrosAtivos.length > 0) {
+          const match =
+            findFiltroByPlanoConta(planoConta, descricao, filtrosAtivos) ||
+            buscarFiltroPorTexto(planoConta, descricao, filtrosAtivos);
+          if (match) return match;
         }
-      }
 
-      if (resumoApi) {
-        if (resumoApi.itens.length > 0) {
-          setResumo(resumoApi);
-          setStatusBusca(
-            `Busca concluida com ${resumoApi.itens.length} movimento(s).`,
+        const { left, right } = parsePlanoConta(planoConta);
+        const nomePlano = right || "Custo da obra";
+        const nomeDespesa = left || descricao || "Movimento";
+        return {
+          filtroLabel: `${nomePlano} / ${nomeDespesa}`,
+          planoConta: planoConta || `${nomeDespesa} - ${nomePlano}`,
+        };
+      };
+
+      const carregarDetalhesEmLotes = async (lista: any[], rota: string) => {
+        const resultados: Array<{ base: any; dados: any | null }> = [];
+        const tamanhoLote = 20;
+
+        for (let i = 0; i < lista.length; i += tamanhoLote) {
+          const lote = lista.slice(i, i + tamanhoLote);
+          const respostas = await Promise.allSettled(
+            lote.map((item: any) =>
+              api.get(
+                `${rota}?id=${encodeURIComponent(String(item?.id ?? ""))}`,
+                { timeout: 30000 },
+              ),
+            ),
           );
-          return;
-        }
-      }
 
-      const resumoLegado = await buscarResumoPorApisLegadas(
-        dataInicioFormatada,
-        dataFimFormatada,
-        filtrosParaBusca,
-        localSelecionado,
+          respostas.forEach((resposta, idx) => {
+            const base = lote[idx];
+            const dados =
+              resposta.status === "fulfilled"
+                ? (resposta.value?.data?.dados ?? null)
+                : null;
+            resultados.push({ base, dados });
+          });
+        }
+
+        return resultados;
+      };
+
+      const detalhesPagar = await carregarDetalhesEmLotes(
+        pagarLista,
+        "pagar/listar_id.php",
       );
 
-      if (resumoLegado.itens.length === 0) {
-        const resumoAproximado = await buscarResumoPorDescricaoAproximada(
-          dataInicioFormatada,
-          dataFimFormatada,
-          filtrosParaBusca,
-          localSelecionado,
-        );
+      detalhesPagar.forEach((item, index) => {
+        diagnostico.detalhesPagarTotal += 1;
+        const dados = item.dados ?? {};
+        const base = item.base ?? {};
 
-        if (resumoAproximado.itens.length > 0) {
-          setResumo(resumoAproximado);
-          setStatusBusca(
-            `${gerouFiltrosAutomaticos ? "Classificacao automatica aplicada. " : ""}Busca concluida com ${resumoAproximado.itens.length} movimento(s) por correspondencia aproximada.`,
-          );
-          return;
+        const localRegistro = extrairLocal(dados, base);
+        if (!localCombina(localRegistro, localSelecionado)) return;
+        diagnostico.detalhesPagarLocal += 1;
+
+        const planoConta = String(
+          dados?.plano ?? base?.plano_conta ?? base?.plano ?? "",
+        ).trim();
+        const descricao = String(
+          dados?.descricao ?? base?.descricao ?? "",
+        ).trim();
+        if (!registroCombinaDespesa(planoConta, descricao)) return;
+        diagnostico.detalhesPagarDespesa += 1;
+
+        const filtro = resolverFiltro(planoConta, descricao);
+        if (!filtro) return;
+
+        const valor = parseAmount(
+          dados?.subtotal ?? dados?.valor ?? base?.subtotal ?? base?.valor,
+        );
+        const pendente = statusEhPendente(dados?.status ?? base?.status);
+        if (pendente) {
+          diagnostico.detalhesPagarPendente += 1;
+
+          resumoNovo.aPagar += valor;
+          itens.push({
+            id: `pagar-pendente-${dados?.id ?? base?.id ?? index}`,
+            fonte: "pagar",
+            descricao: descricao || "Conta a pagar",
+            valor,
+            vencimento: String(
+              dados?.vencF ?? dados?.vencimento ?? base?.vencimento ?? "",
+            ),
+            statusLabel: "A pagar",
+            planoConta: planoConta || filtro.planoConta,
+            filtroLabel: filtro.filtroLabel,
+            local: localRegistro,
+            grupoCusto: classificarGrupoCusto(
+              filtro.filtroLabel,
+              filtro.planoConta,
+              planoConta,
+              descricao,
+            ),
+          });
+        } else {
+          realizadosFallbackPagar.push({
+            id: `pagar-realizado-fallback-${dados?.id ?? base?.id ?? index}`,
+            fonte: "pagar",
+            descricao: descricao || "Conta a pagar",
+            valor,
+            vencimento: dataReferenciaRealizacao(dados, base),
+            statusLabel: "Pago",
+            planoConta: planoConta || filtro.planoConta,
+            filtroLabel: filtro.filtroLabel,
+            local: localRegistro,
+            grupoCusto: classificarGrupoCusto(
+              filtro.filtroLabel,
+              filtro.planoConta,
+              planoConta,
+              descricao,
+            ),
+          });
         }
-      }
+      });
 
-      setResumo(resumoLegado);
+      const detalhesReceber = await carregarDetalhesEmLotes(
+        receberLista,
+        "receber/listar_id.php",
+      );
 
-      if (resumoLegado.itens.length === 0) {
-        setStatusBusca(
-          "Busca concluida sem resultados para os filtros e periodo.",
+      detalhesReceber.forEach((item, index) => {
+        diagnostico.detalhesReceberTotal += 1;
+        const dados = item.dados ?? {};
+        const base = item.base ?? {};
+
+        const localRegistro = extrairLocal(dados, base);
+        if (!localCombina(localRegistro, localSelecionado)) return;
+        diagnostico.detalhesReceberLocal += 1;
+
+        const planoConta = String(
+          dados?.plano ?? base?.plano_conta ?? base?.plano ?? "",
+        ).trim();
+        const descricao = String(
+          dados?.descricao ?? base?.descricao ?? "",
+        ).trim();
+        if (!registroCombinaDespesa(planoConta, descricao)) return;
+        diagnostico.detalhesReceberDespesa += 1;
+
+        const filtro = resolverFiltro(planoConta, descricao);
+        if (!filtro) return;
+
+        const valorSaldo = parseAmount(dados?.valor ?? base?.valor);
+        const valorBaixaInformada = parseAmount(
+          dados?.subtotal ?? base?.subtotal,
         );
-        Alert.alert(
-          "Busca concluida",
-          "Nenhum lancamento encontrado para as despesas selecionadas no periodo informado.",
-        );
-      } else {
-        setStatusBusca(
-          `${gerouFiltrosAutomaticos ? "Classificacao automatica aplicada. " : ""}Busca concluida com ${resumoLegado.itens.length} movimento(s).`,
-        );
-      }
+        const valorBaixaRealizada =
+          valorBaixaInformada > 0 ? valorBaixaInformada : valorSaldo;
+        const temBaixaRegistrada = !!String(
+          dados?.data_baixa ??
+            dados?.dataBaixaF ??
+            base?.data_baixa ??
+            base?.dataBaixaF ??
+            "",
+        ).trim();
+        const pendente = statusEhPendente(dados?.status ?? base?.status);
+        if (pendente) {
+          diagnostico.detalhesReceberPendente += 1;
+
+          resumoNovo.aReceber += valorSaldo;
+          itens.push({
+            id: `receber-pendente-${dados?.id ?? base?.id ?? index}`,
+            fonte: "receber",
+            descricao: descricao || "Conta a receber",
+            valor: valorSaldo,
+            vencimento: String(
+              dados?.vencF ?? dados?.vencimento ?? base?.vencimento ?? "",
+            ),
+            statusLabel: "A receber",
+            planoConta: planoConta || filtro.planoConta,
+            filtroLabel: filtro.filtroLabel,
+            local: localRegistro,
+            grupoCusto: classificarGrupoCusto(
+              filtro.filtroLabel,
+              filtro.planoConta,
+              planoConta,
+              descricao,
+            ),
+          });
+
+          // Em baixa parcial a conta segue pendente; se a movimentacao nao
+          // vier da API de banco, registra fallback para exibir no resumo/PDF.
+          if (temBaixaRegistrada && valorBaixaInformada > 0) {
+            recebimentosParciaisPendentes.push({
+              id: `receber-parcial-fallback-${dados?.id ?? base?.id ?? index}`,
+              fonte: "receber",
+              descricao: descricao || "Conta a receber",
+              valor: valorBaixaInformada,
+              vencimento: dataReferenciaRealizacao(dados, base),
+              statusLabel: "Recebido parcial",
+              planoConta: planoConta || filtro.planoConta,
+              filtroLabel: filtro.filtroLabel,
+              local: localRegistro,
+              grupoCusto: classificarGrupoCusto(
+                filtro.filtroLabel,
+                filtro.planoConta,
+                planoConta,
+                descricao,
+              ),
+            });
+          }
+        } else {
+          realizadosFallbackReceber.push({
+            id: `receber-realizado-fallback-${dados?.id ?? base?.id ?? index}`,
+            fonte: "receber",
+            descricao: descricao || "Conta a receber",
+            valor: valorBaixaRealizada,
+            vencimento: dataReferenciaRealizacao(dados, base),
+            statusLabel: "Recebido",
+            planoConta: planoConta || filtro.planoConta,
+            filtroLabel: filtro.filtroLabel,
+            local: localRegistro,
+            grupoCusto: classificarGrupoCusto(
+              filtro.filtroLabel,
+              filtro.planoConta,
+              planoConta,
+              descricao,
+            ),
+          });
+        }
+      });
+
+      const movimentosPorBanco = await Promise.allSettled(
+        bancos.map((item: any) =>
+          api.get(
+            `mov/listar.php?data=${dataInicioFormatada}&data1=${dataFimFormatada}&lanc=${encodeURIComponent(String(item?.nome ?? ""))}`,
+          ),
+        ),
+      );
+
+      movimentosPorBanco.forEach((result) => {
+        if (result.status !== "fulfilled") return;
+        const movimentos = Array.isArray(result.value?.data?.resultado)
+          ? result.value.data.resultado
+          : [];
+
+        movimentos.forEach((item: any) => {
+          diagnostico.movTotal += 1;
+          const localRegistro = extrairLocal(item);
+          if (!localCombina(localRegistro, localSelecionado)) return;
+          diagnostico.movLocal += 1;
+
+          const planoConta = String(item?.plano_conta ?? "").trim();
+          const descricao = String(item?.descricao ?? "").trim();
+          if (!registroCombinaDespesa(planoConta, descricao)) return;
+          diagnostico.movDespesa += 1;
+
+          const filtro = resolverFiltro(planoConta, descricao);
+          if (!filtro) return;
+
+          const valor = parseAmount(item?.valor);
+          const movimento = String(item?.movimento ?? "");
+
+          if (movimentoEhPagar(movimento)) {
+            diagnostico.movReconhecido += 1;
+            resumoNovo.pago += valor;
+            itens.push({
+              id: `pagar-pago-${item?.id ?? Math.random()}`,
+              fonte: "pagar",
+              descricao: descricao || "Conta a pagar",
+              valor,
+              vencimento: String(item?.data ?? ""),
+              statusLabel: "Pago",
+              planoConta: planoConta || filtro.planoConta,
+              filtroLabel: filtro.filtroLabel,
+              local: localRegistro,
+              grupoCusto: classificarGrupoCusto(
+                filtro.filtroLabel,
+                filtro.planoConta,
+                planoConta,
+                descricao,
+              ),
+            });
+          }
+
+          if (movimentoEhReceber(movimento)) {
+            diagnostico.movReconhecido += 1;
+            resumoNovo.recebido += valor;
+            itens.push({
+              id: `receber-recebido-${item?.id ?? Math.random()}`,
+              fonte: "receber",
+              descricao: descricao || "Conta a receber",
+              valor,
+              vencimento: String(item?.data ?? ""),
+              statusLabel: "Recebido",
+              planoConta: planoConta || filtro.planoConta,
+              filtroLabel: filtro.filtroLabel,
+              local: localRegistro,
+              grupoCusto: classificarGrupoCusto(
+                filtro.filtroLabel,
+                filtro.planoConta,
+                planoConta,
+                descricao,
+              ),
+            });
+          }
+        });
+      });
+
+      const jaTemRecebidoSemelhante = (itemFallback: MovimentoResumo) =>
+        itens.some((item) => {
+          if (item.fonte !== "receber") return false;
+          if (!normalizeText(item.statusLabel).startsWith("recebido")) {
+            return false;
+          }
+
+          const mesmoPlano =
+            normalizeText(item.planoConta) ===
+            normalizeText(itemFallback.planoConta);
+          const mesmaDescricao =
+            normalizeText(item.descricao) ===
+            normalizeText(itemFallback.descricao);
+          const mesmoLocal =
+            normalizeText(item.local ?? "") ===
+            normalizeText(itemFallback.local ?? "");
+          const mesmoValor = Math.abs(item.valor - itemFallback.valor) < 0.01;
+
+          return mesmoPlano && mesmaDescricao && mesmoLocal && mesmoValor;
+        });
+
+      const jaTemMovimentoSemelhante = (itemFallback: MovimentoResumo) =>
+        itens.some((item) => {
+          if (item.fonte !== itemFallback.fonte) return false;
+
+          const mesmoPlano =
+            normalizeText(item.planoConta) ===
+            normalizeText(itemFallback.planoConta);
+          const mesmaDescricao =
+            normalizeText(item.descricao) ===
+            normalizeText(itemFallback.descricao);
+          const mesmoLocal =
+            normalizeText(item.local ?? "") ===
+            normalizeText(itemFallback.local ?? "");
+          const mesmoValor = Math.abs(item.valor - itemFallback.valor) < 0.01;
+
+          return mesmoPlano && mesmaDescricao && mesmoLocal && mesmoValor;
+        });
+
+      recebimentosParciaisPendentes.forEach((itemParcial) => {
+        if (jaTemRecebidoSemelhante(itemParcial)) return;
+
+        resumoNovo.recebido += itemParcial.valor;
+        itens.push(itemParcial);
+      });
+
+      realizadosFallbackPagar.forEach((item) => {
+        if (jaTemMovimentoSemelhante(item)) return;
+        resumoNovo.pago += item.valor;
+        itens.push(item);
+        diagnostico.detalhesPagarRealizadoFallback += 1;
+      });
+
+      realizadosFallbackReceber.forEach((item) => {
+        if (jaTemMovimentoSemelhante(item)) return;
+        resumoNovo.recebido += item.valor;
+        itens.push(item);
+        diagnostico.detalhesReceberRealizadoFallback += 1;
+      });
+
+      resumoNovo.resultadoProjetado =
+        resumoNovo.recebido +
+        resumoNovo.aReceber -
+        resumoNovo.pago -
+        resumoNovo.aPagar;
+      resumoNovo.itens = sortMovimentosDesc(aplicarGrupoCustoNosItens(itens));
+
+      setResumo(resumoNovo);
+      setStatusBusca(
+        resumoNovo.itens.length > 0
+          ? `Busca concluida com ${resumoNovo.itens.length} movimento(s).`
+          : `Nenhum movimento encontrado para periodo/local/plano selecionados. Base: pagar ${pagarListaBruta.length}, receber ${receberListaBruta.length}, bancos ${bancos.length}. Etapas: p(${diagnostico.detalhesPagarTotal}/${diagnostico.detalhesPagarLocal}/${diagnostico.detalhesPagarDespesa}/${diagnostico.detalhesPagarPendente}/${diagnostico.detalhesPagarRealizadoFallback}) r(${diagnostico.detalhesReceberTotal}/${diagnostico.detalhesReceberLocal}/${diagnostico.detalhesReceberDespesa}/${diagnostico.detalhesReceberPendente}/${diagnostico.detalhesReceberRealizadoFallback}) m(${diagnostico.movTotal}/${diagnostico.movLocal}/${diagnostico.movDespesa}/${diagnostico.movReconhecido}).`,
+      );
     } catch (error) {
       console.log("Erro ao buscar resumo automatico", error);
       setStatusBusca("Falha ao buscar dados automaticos.");
@@ -1797,6 +2225,7 @@ export default function LancamentosCustos() {
     const receitaBruta = resumo.recebido + resumo.aReceber;
     const custoObra = resumo.pago + resumo.aPagar;
     const lucroProjetado = receitaBruta - custoObra;
+    const resultadoAteDataFinal = resumo.recebido - resumo.pago;
     const totalCustosFixos = resumo.itens
       .filter(
         (item) => item.fonte === "pagar" && item.grupoCusto === "Custos fixos",
@@ -1825,6 +2254,8 @@ export default function LancamentosCustos() {
       receitaBruta > 0 ? (totalCustoObraDemais / receitaBruta) * 100 : 0;
     const percentualLucroProjetado =
       receitaBruta > 0 ? (lucroProjetado / receitaBruta) * 100 : 0;
+    const percentualResultadoAteDataFinal =
+      resumo.recebido > 0 ? (resultadoAteDataFinal / resumo.recebido) * 100 : 0;
 
     try {
       const localLabel =
@@ -1901,6 +2332,11 @@ export default function LancamentosCustos() {
                 <div class="value">${escapeHtml(formatCurrency(lucroProjetado))}</div>
                 <div class="pct">${escapeHtml(formatPercent(percentualLucroProjetado))} da receita bruta</div>
               </div>
+              <div>
+                <div class="label">Resultado ate data final</div>
+                <div class="value">${escapeHtml(formatCurrency(resultadoAteDataFinal))}</div>
+                <div class="pct">${escapeHtml(formatPercent(percentualResultadoAteDataFinal))} resultado realizado no periodo selecionado</div>
+              </div>
             </div>
 
             <div class="box">
@@ -1970,6 +2406,7 @@ export default function LancamentosCustos() {
 
   const receitaBrutaObra = resumo.recebido + resumo.aReceber;
   const custoObra = resumo.pago + resumo.aPagar;
+  const resultadoAteDataFinal = resumo.recebido - resumo.pago;
   const totalCustosFixos = resumo.itens
     .filter(
       (item) => item.fonte === "pagar" && item.grupoCusto === "Custos fixos",
@@ -1999,6 +2436,62 @@ export default function LancamentosCustos() {
     receitaBrutaObra > 0
       ? (resumo.resultadoProjetado / receitaBrutaObra) * 100
       : 0;
+  const percentualResultadoAteDataFinal =
+    resumo.recebido > 0 ? (resultadoAteDataFinal / resumo.recebido) * 100 : 0;
+  const localLabelPainel =
+    localSelecionado === LOCAL_TODOS ? "Todos os locais" : localSelecionado;
+  const planoLabelPainel = categoriaSelecionadaObj?.nome || "Todos os planos";
+
+  const cardsVisaoGeral = [
+    {
+      key: "receita",
+      titulo: "Receita bruta",
+      valor: formatCurrency(receitaBrutaObra),
+      detalhe: `${formatPercent(percentualReceitaBruta)} da referencia`,
+      icone: "trending-up",
+      tone: "positive" as const,
+    },
+    {
+      key: "custo",
+      titulo: "Custo da obra",
+      valor: formatCurrency(custoObra),
+      detalhe: `${formatPercent(percentualCustoObra)} da receita`,
+      icone: "construction",
+      tone: "negative" as const,
+    },
+    {
+      key: "saldo",
+      titulo: "Resultado ate data",
+      valor: formatCurrency(resultadoAteDataFinal),
+      detalhe: `${formatPercent(percentualResultadoAteDataFinal)} resultado realizado no periodo selecionado`,
+      icone: resultadoAteDataFinal >= 0 ? "insights" : "warning-amber",
+      tone:
+        resultadoAteDataFinal >= 0
+          ? ("positive" as const)
+          : ("negative" as const),
+    },
+  ];
+
+  const distribuicaoCustos = [
+    {
+      key: "fixos",
+      titulo: "Custos fixos",
+      valor: totalCustosFixos,
+      percentual: percentualCustosFixos,
+    },
+    {
+      key: "variaveis",
+      titulo: "Custos variaveis",
+      valor: totalCustosVariaveis,
+      percentual: percentualCustosVariaveis,
+    },
+    {
+      key: "obra",
+      titulo: "Outras despesas da obra",
+      valor: totalCustoObraDemais,
+      percentual: percentualCustoObraDemais,
+    },
+  ];
 
   const filtrosAgrupados = useMemo(() => {
     const grupoOrdem: GrupoCusto[] = [
@@ -2027,6 +2520,99 @@ export default function LancamentosCustos() {
       .filter((bloco) => bloco.itens.length > 0);
   }, [filtrosSelecionados]);
 
+  const opcoesOrdenacao: Array<{ key: MovimentoSortOption; label: string }> = [
+    { key: "data_desc", label: "Recentes" },
+    { key: "data_asc", label: "Antigos" },
+    { key: "valor_desc", label: "Maior valor" },
+    { key: "valor_asc", label: "Menor valor" },
+    { key: "descricao_asc", label: "A-Z" },
+  ];
+
+  const movimentosFiltradosOrdenados = useMemo(() => {
+    const buscaNorm = normalizeText(buscaMovimentos);
+
+    const filtrados = resumo.itens.filter((item) => {
+      if (!buscaNorm) return true;
+
+      const texto = normalizeText(
+        `${item.descricao} ${item.filtroLabel} ${item.planoConta} ${item.grupoCusto} ${item.statusLabel} ${item.local ?? ""}`,
+      );
+      return texto.includes(buscaNorm);
+    });
+
+    return [...filtrados].sort((a, b) => {
+      if (ordemMovimentos === "data_desc") {
+        return (
+          movimentoDateTime(b.vencimento) - movimentoDateTime(a.vencimento)
+        );
+      }
+      if (ordemMovimentos === "data_asc") {
+        return (
+          movimentoDateTime(a.vencimento) - movimentoDateTime(b.vencimento)
+        );
+      }
+      if (ordemMovimentos === "valor_desc") {
+        return b.valor - a.valor;
+      }
+      if (ordemMovimentos === "valor_asc") {
+        return a.valor - b.valor;
+      }
+      return normalizeText(a.descricao).localeCompare(
+        normalizeText(b.descricao),
+      );
+    });
+  }, [resumo.itens, buscaMovimentos, ordemMovimentos]);
+
+  const movimentosPorGrupo = useMemo(() => {
+    const ordem: GrupoCusto[] = [
+      "Custos fixos",
+      "Custos variaveis",
+      "Custo da obra",
+    ];
+
+    return ordem.map((grupo) => {
+      const itens = movimentosFiltradosOrdenados.filter(
+        (item) => item.grupoCusto === grupo,
+      );
+      const total = itens.reduce((acc, item) => acc + item.valor, 0);
+      return { grupo, itens, total };
+    });
+  }, [movimentosFiltradosOrdenados]);
+
+  const alternarGrupoCompacto = (grupo: GrupoCusto) => {
+    setGruposExpandidos((prev) => ({ ...prev, [grupo]: !prev[grupo] }));
+  };
+
+  const renderMovimentoItem = (item: MovimentoResumo) => (
+    <View
+      key={item.id}
+      style={[
+        styles.itemRow,
+        item.fonte === "receber" ? styles.itemRowReceber : styles.itemRowPagar,
+      ]}
+    >
+      <View style={styles.itemTexts}>
+        <Text style={styles.itemTitle}>{item.descricao}</Text>
+        <Text style={styles.itemSubtitle}>{item.filtroLabel}</Text>
+        <Text style={styles.itemSubtitle}>Grupo: {item.grupoCusto}</Text>
+        <Text style={styles.itemSubtitle}>{item.planoConta}</Text>
+        {!!item.local && (
+          <Text style={styles.itemSubtitle}>Local: {item.local}</Text>
+        )}
+        <Text style={styles.itemMeta}>
+          {item.statusLabel} • {item.vencimento}
+        </Text>
+      </View>
+
+      <View style={styles.itemValueBox}>
+        <Text style={styles.itemBadge}>
+          {item.fonte === "receber" ? "Receber" : "Pagar"}
+        </Text>
+        <Text style={styles.itemValue}>{formatCurrency(item.valor)}</Text>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -2034,16 +2620,22 @@ export default function LancamentosCustos() {
         style={styles.flexOne}
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <MaterialIcons name="arrow-back" size={28} color="#111827" />
-          </TouchableOpacity>
-          <Image
-            style={styles.logo}
-            source={require("../../assets/logo2.png")}
-          />
+          <View style={styles.containerHeader}>
+            <TouchableOpacity
+              style={styles.menu}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons
+                name="arrow-back-circle-outline"
+                size={35}
+                color="#000"
+              />
+            </TouchableOpacity>
+            <Image
+              style={styles.logo}
+              source={require("../../assets/logo2.png")}
+            />
+          </View>
         </View>
 
         <ScrollView
@@ -2051,12 +2643,24 @@ export default function LancamentosCustos() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.heroCard}>
+            <View style={styles.heroOrbTop} />
+            <View style={styles.heroOrbBottom} />
             <Text style={styles.heroBadge}>Calculo Automatico</Text>
             <Text style={styles.heroTitle}>Lucro por periodo e despesas</Text>
             <Text style={styles.heroSubtitle}>
               Escolha as despesas no plano de contas e a tela busca no banco os
               dados de pagar e receber automaticamente.
             </Text>
+            <View style={styles.heroMetaWrap}>
+              <View style={styles.heroMetaChip}>
+                <MaterialIcons name="place" size={14} color="#99f6e4" />
+                <Text style={styles.heroMetaText}>{localLabelPainel}</Text>
+              </View>
+              <View style={styles.heroMetaChip}>
+                <MaterialIcons name="category" size={14} color="#99f6e4" />
+                <Text style={styles.heroMetaText}>{planoLabelPainel}</Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.card}>
@@ -2298,6 +2902,42 @@ export default function LancamentosCustos() {
               <Text style={styles.printButtonText}>Imprimir relatorio</Text>
             </TouchableOpacity>
 
+            <View style={styles.glanceGrid}>
+              {cardsVisaoGeral.map((card) => {
+                const isPositive = card.tone === "positive";
+                return (
+                  <View
+                    key={card.key}
+                    style={[
+                      styles.glanceCard,
+                      isPositive
+                        ? styles.glanceCardPositive
+                        : styles.glanceCardNegative,
+                    ]}
+                  >
+                    <View style={styles.glanceHeader}>
+                      <Text style={styles.glanceTitle}>{card.titulo}</Text>
+                      <MaterialIcons
+                        name={card.icone as any}
+                        size={18}
+                        color={isPositive ? "#166534" : "#991b1b"}
+                      />
+                    </View>
+                    <Text
+                      style={
+                        isPositive
+                          ? styles.glanceValuePositive
+                          : styles.glanceValueNegative
+                      }
+                    >
+                      {card.valor}
+                    </Text>
+                    <Text style={styles.glanceDetail}>{card.detalhe}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
             <View style={styles.metricsGrid}>
               <View style={[styles.metricCard, styles.metricIncomeCard]}>
                 <Text style={styles.metricLabel}>Recebido</Text>
@@ -2402,10 +3042,100 @@ export default function LancamentosCustos() {
                 </Text>
               </View>
             </View>
+
+            <View style={styles.breakdownPanel}>
+              <Text style={styles.breakdownTitle}>Distribuicao de custos</Text>
+              {distribuicaoCustos.map((item) => {
+                const larguraBarra = Math.max(
+                  6,
+                  Math.min(100, Number(item.percentual.toFixed(1))),
+                );
+                return (
+                  <View key={item.key} style={styles.breakdownItem}>
+                    <View style={styles.breakdownItemHeader}>
+                      <Text style={styles.breakdownItemTitle}>
+                        {item.titulo}
+                      </Text>
+                      <Text style={styles.breakdownItemValue}>
+                        {formatCurrency(item.valor)}
+                      </Text>
+                    </View>
+                    <View style={styles.breakdownBarTrack}>
+                      <View
+                        style={[
+                          styles.breakdownBarFill,
+                          { width: `${larguraBarra}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.breakdownPercentLabel}>
+                      {formatPercent(item.percentual)} da receita bruta
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
 
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Movimentos encontrados</Text>
+
+            <View style={styles.movControlsTop}>
+              <View style={styles.searchBox}>
+                <MaterialIcons name="search" size={18} color="#64748b" />
+                <TextInput
+                  style={styles.searchInput}
+                  value={buscaMovimentos}
+                  onChangeText={setBuscaMovimentos}
+                  placeholder="Buscar por descricao, local, plano ou grupo"
+                  placeholderTextColor="#94a3b8"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.compactToggle,
+                  modoCompacto && styles.compactToggleActive,
+                ]}
+                onPress={() => setModoCompacto((prev) => !prev)}
+              >
+                <MaterialIcons
+                  name={modoCompacto ? "view-headline" : "view-agenda"}
+                  size={16}
+                  color={modoCompacto ? "#ffffff" : "#0f172a"}
+                />
+                <Text
+                  style={[
+                    styles.compactToggleText,
+                    modoCompacto && styles.compactToggleTextActive,
+                  ]}
+                >
+                  {modoCompacto ? "Modo compacto" : "Modo detalhado"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sortRow}>
+              {opcoesOrdenacao.map((opcao) => {
+                const ativo = ordemMovimentos === opcao.key;
+                return (
+                  <TouchableOpacity
+                    key={opcao.key}
+                    style={[styles.sortChip, ativo && styles.sortChipActive]}
+                    onPress={() => setOrdemMovimentos(opcao.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.sortChipText,
+                        ativo && styles.sortChipTextActive,
+                      ]}
+                    >
+                      {opcao.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
             {loadingResumo ? (
               <View style={styles.loadingBox}>
@@ -2414,41 +3144,52 @@ export default function LancamentosCustos() {
                   Atualizando movimentos...
                 </Text>
               </View>
-            ) : resumo.itens.length === 0 ? (
+            ) : movimentosFiltradosOrdenados.length === 0 ? (
               <Text style={styles.emptyText}>
-                Nenhum movimento encontrado para o periodo e despesas
-                selecionadas.
+                {resumo.itens.length === 0
+                  ? "Nenhum movimento encontrado para o periodo e despesas selecionadas."
+                  : "Nenhum movimento corresponde aos filtros de busca aplicados."}
               </Text>
-            ) : (
-              resumo.itens.map((item) => (
-                <View key={item.id} style={styles.itemRow}>
-                  <View style={styles.itemTexts}>
-                    <Text style={styles.itemTitle}>{item.descricao}</Text>
-                    <Text style={styles.itemSubtitle}>{item.filtroLabel}</Text>
-                    <Text style={styles.itemSubtitle}>
-                      Grupo: {item.grupoCusto}
-                    </Text>
-                    <Text style={styles.itemSubtitle}>{item.planoConta}</Text>
-                    {!!item.local && (
-                      <Text style={styles.itemSubtitle}>
-                        Local: {item.local}
-                      </Text>
-                    )}
-                    <Text style={styles.itemMeta}>
-                      {item.statusLabel} • {item.vencimento}
-                    </Text>
-                  </View>
+            ) : modoCompacto ? (
+              movimentosPorGrupo.map((bloco) => {
+                if (bloco.itens.length === 0) return null;
+                const expandido = !!gruposExpandidos[bloco.grupo];
 
-                  <View style={styles.itemValueBox}>
-                    <Text style={styles.itemBadge}>
-                      {item.fonte === "receber" ? "Receber" : "Pagar"}
-                    </Text>
-                    <Text style={styles.itemValue}>
-                      {formatCurrency(item.valor)}
-                    </Text>
+                return (
+                  <View key={bloco.grupo} style={styles.compactGroupBox}>
+                    <TouchableOpacity
+                      style={styles.compactGroupHeader}
+                      onPress={() => alternarGrupoCompacto(bloco.grupo)}
+                    >
+                      <View style={styles.compactGroupHeaderLeft}>
+                        <MaterialIcons
+                          name={expandido ? "expand-more" : "chevron-right"}
+                          size={20}
+                          color="#334155"
+                        />
+                        <Text style={styles.compactGroupTitle}>
+                          {bloco.grupo}
+                        </Text>
+                      </View>
+                      <View style={styles.compactGroupHeaderRight}>
+                        <Text style={styles.compactGroupCount}>
+                          {bloco.itens.length} item(ns)
+                        </Text>
+                        <Text style={styles.compactGroupTotal}>
+                          {formatCurrency(bloco.total)}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {expandido &&
+                      bloco.itens.map((item) => renderMovimentoItem(item))}
                   </View>
-                </View>
-              ))
+                );
+              })
+            ) : (
+              movimentosFiltradosOrdenados.map((item) =>
+                renderMovimentoItem(item),
+              )
             )}
           </View>
         </ScrollView>

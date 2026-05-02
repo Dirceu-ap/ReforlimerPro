@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Text,
@@ -94,6 +94,7 @@ const BaixarPagar: React.FC = () => {
   const [edit, setEdit] = useState(false);
   const [loading, setLoading] = useState(false);
   const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   function parseDateFlexible(value: any): Date | null {
     const raw = String(value ?? "").trim();
@@ -442,6 +443,8 @@ const BaixarPagar: React.FC = () => {
 
   // Função para salvar os dados (dar baixa na conta)
   async function saveData() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setButtonDisabled(true);
     const user = await AsyncStorage.getItem("@user");
     const userName = (await AsyncStorage.getItem("@user_name")) || "";
@@ -567,6 +570,7 @@ const BaixarPagar: React.FC = () => {
       );
     } finally {
       setButtonDisabled(false);
+      savingRef.current = false;
     }
   }
 
@@ -828,7 +832,7 @@ const BaixarPagar: React.FC = () => {
           <RectButton
             style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
             onPress={() => {
-              if (!buttonDisabled) {
+              if (!buttonDisabled && !savingRef.current) {
                 setSucess(true);
                 saveData();
                 setSucess(false);
@@ -836,7 +840,9 @@ const BaixarPagar: React.FC = () => {
             }}
             enabled={!buttonDisabled} // Desabilita o botão enquanto `buttonDisabled` for true
           >
-            <Text style={styles.ButtonText}>Dar Baixa</Text>
+            <Text style={styles.ButtonText}>
+              {buttonDisabled ? "Salvando..." : "Dar Baixa"}
+            </Text>
           </RectButton>
         </View>
       </TouchableWithoutFeedback>

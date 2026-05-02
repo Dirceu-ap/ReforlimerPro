@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Text,
@@ -50,6 +50,8 @@ const NovoFornecedor: React.FC = () => {
   const [sucess, setSucess] = useState(false); // Exibe animação de sucesso
   const [edit, setEdit] = useState(false); // Define se está editando ou inserindo
   const [loading, setLoading] = useState(false); // Loading da tela
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   // Busca lista de bancos ao abrir a tela
   async function selectListaBancos() {
@@ -63,12 +65,17 @@ const NovoFornecedor: React.FC = () => {
 
   // Função para salvar os dados do formulário (inserir ou editar fornecedor)
   async function saveData() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setButtonDisabled(true);
     if (nome == "" || cpf == "" || pessoa == "" || ativo == "") {
       showMessage({
         message: "Erro ao Salvar",
         description: "Preencha os Campos Obrigatórios!",
         type: "warning",
       });
+      setButtonDisabled(false);
+      savingRef.current = false;
       return;
     }
     setSucess(true);
@@ -121,6 +128,9 @@ const NovoFornecedor: React.FC = () => {
     } catch (error) {
       Alert.alert("Ops", "Alguma coisa deu errado, tente novamente.");
       setSucess(false);
+    } finally {
+      setButtonDisabled(false);
+      savingRef.current = false;
     }
   }
 
@@ -371,14 +381,19 @@ const NovoFornecedor: React.FC = () => {
 
       {/* Botão para salvar registro */}
       <RectButton
-        style={styles.Button}
+        style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
         onPress={() => {
-          setSucess(true);
-          saveData();
-          setSucess(false);
+          if (!buttonDisabled && !savingRef.current) {
+            setSucess(true);
+            saveData();
+            setSucess(false);
+          }
         }}
+        enabled={!buttonDisabled}
       >
-        <Text style={styles.ButtonText}>Salvar Registro</Text>
+        <Text style={styles.ButtonText}>
+          {buttonDisabled ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
 
       {/* <NewPacientes /> */}

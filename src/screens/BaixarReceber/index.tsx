@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Text,
@@ -107,6 +107,7 @@ const BaixarReceber: React.FC = () => {
   const [edit, setEdit] = useState(false);
   const [loading, setLoading] = useState(false);
   const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   async function selectListaForn() {
     try {
@@ -150,7 +151,10 @@ const BaixarReceber: React.FC = () => {
 
       setValorContaOriginal(valorDb);
       setValor(valorDb);
-      setSaida(String(dados?.saida ?? "Caixa").trim() || "Caixa");
+      const saidaDb = String(dados?.saida ?? "").trim();
+      const saidaInvalidaBaixa =
+        !saidaDb || /or[cç]amento\s*obra/i.test(saidaDb);
+      setSaida(saidaInvalidaBaixa ? "Caixa" : saidaDb);
       const dias = calcularDiasAtraso(dados?.vencimentoF ?? dados?.vencimento);
       setDiasAtraso(dias);
       // Multa padronizada: 2% fixo quando houver atraso.
@@ -207,6 +211,8 @@ const BaixarReceber: React.FC = () => {
   }
 
   async function saveData() {
+    if (savingRef.current) return;
+    savingRef.current = true;
     setButtonDisabled(true); // Desabilita o botão ao iniciar o salvamento
     const user = await AsyncStorage.getItem("@user");
 
@@ -226,11 +232,16 @@ const BaixarReceber: React.FC = () => {
     }
 
     try {
+      const saidaFinal =
+        !saida || /or[cç]amento\s*obra/i.test(String(saida))
+          ? "Caixa"
+          : String(saida);
+
       const obj = {
         id: id_reg,
         id_compra: id_reg,
         valor: parseNum(valor),
-        saida: saida,
+        saida: saidaFinal,
         multa: parseNum(multa),
         juros: parseNum(juros),
         desconto: parseNum(desconto),
@@ -283,6 +294,7 @@ const BaixarReceber: React.FC = () => {
       );
     } finally {
       setButtonDisabled(false); // Reabilita o botão após a operação
+      savingRef.current = false;
     }
   }
 
@@ -533,7 +545,7 @@ const BaixarReceber: React.FC = () => {
           <RectButton
             style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
             onPress={() => {
-              if (!buttonDisabled) {
+              if (!buttonDisabled && !savingRef.current) {
                 setSucess(true);
                 saveData();
                 setSucess(false);
@@ -541,7 +553,9 @@ const BaixarReceber: React.FC = () => {
             }}
             enabled={!buttonDisabled} // Desabilita o botão enquanto `buttonDisabled` for true
           >
-            <Text style={styles.ButtonText}>Dar Baixa</Text>
+            <Text style={styles.ButtonText}>
+              {buttonDisabled ? "Salvando..." : "Dar Baixa"}
+            </Text>
           </RectButton>
         </View>
       </TouchableWithoutFeedback>

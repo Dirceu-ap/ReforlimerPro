@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Text,
@@ -46,15 +46,22 @@ const NovaDespesa: React.FC = () => {
   const [sucess, setSucess] = useState(false); // Exibe animação de sucesso
   const [edit, setEdit] = useState(false); // Define se está editando ou inserindo
   const [loading, setLoading] = useState(false); // Loading da tela
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   // Função para salvar a despesa (inserir ou editar)
   async function saveData() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setButtonDisabled(true);
     if (nome == "") {
       showMessage({
         message: "Erro ao Salvar",
         description: "Preencha os Campos Obrigatórios!",
         type: "warning",
       });
+      setButtonDisabled(false);
+      savingRef.current = false;
       return;
     }
 
@@ -135,6 +142,8 @@ const NovaDespesa: React.FC = () => {
     } finally {
       // resetar sucesso apenas se for necessário visualmente
       setTimeout(() => setSucess(false), 800);
+      setButtonDisabled(false);
+      savingRef.current = false;
     }
   }
 
@@ -276,12 +285,17 @@ const NovaDespesa: React.FC = () => {
 
       {/* Botão para salvar registro */}
       <RectButton
-        style={styles.Button}
+        style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
         onPress={() => {
-          saveData();
+          if (!buttonDisabled && !savingRef.current) {
+            saveData();
+          }
         }}
+        enabled={!buttonDisabled}
       >
-        <Text style={styles.ButtonText}>Salvar Registro</Text>
+        <Text style={styles.ButtonText}>
+          {buttonDisabled ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
 
       {/* <NewPacientes /> */}

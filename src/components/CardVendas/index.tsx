@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
-import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SwipeableRow from "../SwipeableRow/vendas";
 import api from "../../services/api";
@@ -9,10 +9,12 @@ import { showMessage } from "react-native-flash-message";
 import urlRaiz from "../../services/urlRaiz";
 import { Ionicons } from "@expo/vector-icons";
 
+const { Linking } = require("react-native");
+
 interface DadosProps {
   data: any;
   onRefresh?: () => void;
-} 
+}
 
 const CardVendas = ({ data, onRefresh }: DadosProps) => {
   const navigation: any = useNavigation();
@@ -29,7 +31,7 @@ const CardVendas = ({ data, onRefresh }: DadosProps) => {
           onPress: async () => {
             try {
               const res = await api.get(
-                `vendas/excluir.php?id=${id}&user=${user}`
+                `vendas/excluir.php?id=${id}&user=${user}`,
               );
               if (res.data.sucesso === false) {
                 showMessage({
@@ -50,7 +52,7 @@ const CardVendas = ({ data, onRefresh }: DadosProps) => {
             }
           },
         },
-      ]
+      ],
     );
   }
 
@@ -61,7 +63,7 @@ const CardVendas = ({ data, onRefresh }: DadosProps) => {
       <SwipeableRow
         onPressWhatsapp={async () => {
           await Linking.openURL(
-            urlRaiz + `relatorios/venda_class.php?id=${data.id}`
+            urlRaiz + `relatorios/venda_class.php?id=${data.id}`,
           );
         }}
         onPressDelete={async () => {

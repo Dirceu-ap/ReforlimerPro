@@ -121,6 +121,30 @@ export const styles = StyleSheet.create({
         marginBottom: 5,
     },
 
+    ValorLiquido:{
+        fontFamily: fonts.text,
+        fontSize: 13,
+        color: '#555',
+        marginTop: -2,
+        marginBottom: 4,
+    },
+
+    ValorLiquidoReducao:{
+        fontFamily: fonts.text,
+        fontSize: 13,
+        color: '#2e7d32',
+        marginTop: -2,
+        marginBottom: 4,
+    },
+
+    ValorLiquidoAcrescimo:{
+        fontFamily: fonts.text,
+        fontSize: 13,
+        color: '#c62828',
+        marginTop: -2,
+        marginBottom: 4,
+    },
+
     Section:{
         flexDirection: 'row',
         alignItems: "center",

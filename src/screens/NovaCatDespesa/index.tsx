@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Alert,
   Text,
@@ -40,14 +40,21 @@ const NovaCatDespesa: React.FC = () => {
   const [sucess, setSucess] = useState(false);
   const [edit, setEdit] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [buttonDisabled, setButtonDisabled] = useState(false);
+  const savingRef = useRef(false);
 
   async function saveData() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setButtonDisabled(true);
     if (nome == "") {
       showMessage({
         message: "Erro ao Salvar",
         description: "Preencha os Campos Obrigatórios!",
         type: "warning",
       });
+      setButtonDisabled(false);
+      savingRef.current = false;
       return;
     }
     if (catDespesa == "") {
@@ -56,6 +63,8 @@ const NovaCatDespesa: React.FC = () => {
         description: "Preencha a categoria de despesa (cat_despesa)!",
         type: "warning",
       });
+      setButtonDisabled(false);
+      savingRef.current = false;
       return;
     }
     setSucess(true);
@@ -92,6 +101,9 @@ const NovaCatDespesa: React.FC = () => {
     } catch (error) {
       Alert.alert("Ops", "Alguma coisa deu errado, tente novamente.");
       setSucess(false);
+    } finally {
+      setButtonDisabled(false);
+      savingRef.current = false;
     }
   }
 
@@ -212,14 +224,19 @@ const NovaCatDespesa: React.FC = () => {
       </ScrollView>
 
       <RectButton
-        style={styles.Button}
+        style={[styles.Button, buttonDisabled && { opacity: 0.5 }]}
         onPress={() => {
-          setSucess(true);
-          saveData();
-          setSucess(false);
+          if (!buttonDisabled && !savingRef.current) {
+            setSucess(true);
+            saveData();
+            setSucess(false);
+          }
         }}
+        enabled={!buttonDisabled}
       >
-        <Text style={styles.ButtonText}>Salvar Registro</Text>
+        <Text style={styles.ButtonText}>
+          {buttonDisabled ? "Salvando..." : "Salvar Registro"}
+        </Text>
       </RectButton>
 
       {/* <NewPacientes /> */}

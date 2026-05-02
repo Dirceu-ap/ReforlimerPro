@@ -1,13 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
-import {
-  Alert,
-  Linking,
-  Text,
-  TouchableOpacity,
-  View,
-  Image,
-} from "react-native";
+import { Alert, Text, TouchableOpacity, View, Image } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SwipeableRow from "../SwipeableRow/vendas";
 import api from "../../services/api";
@@ -15,6 +8,8 @@ import { styles } from "./styles";
 import { showMessage } from "react-native-flash-message";
 import urlRaiz from "../../services/urlRaiz";
 import { Ionicons } from "@expo/vector-icons";
+
+const { Linking } = require("react-native");
 
 interface DadosProps {
   data: {

@@ -1,10 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
 import React from "react";
-import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Text, TouchableOpacity, View } from "react-native";
 import SwipeableRow from "../SwipeableRow";
 import api from "../../services/api";
 import { styles } from "./styles";
 import { showMessage } from "react-native-flash-message";
+
+const { Linking } = require("react-native");
 
 interface DadosProps {
   data: {
@@ -45,7 +47,7 @@ const CardUsuarios = ({ data }: DadosProps) => {
             }
           },
         },
-      ]
+      ],
     );
   }
 
@@ -61,7 +63,7 @@ const CardUsuarios = ({ data }: DadosProps) => {
           <SwipeableRow
             onPressWhatsapp={async () => {
               await Linking.openURL(
-                `http://api.whatsapp.com/send?1=pt_BR&phone=55${data.telefone}`
+                `http://api.whatsapp.com/send?1=pt_BR&phone=55${data.telefone}`,
               );
             }}
             onPressEdit={async () => {
